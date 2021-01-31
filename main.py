@@ -1,13 +1,15 @@
-import discord as dc 
+import discord as dc
 from dotenv import load_dotenv
 from os import getenv
 import json
 
 load_dotenv()
-token = getenv("TOKEN")
+token = getenv("DISCORD_TOKEN")
+guild = getenv("DISCORD_GUILD")
 
-with open(r'2021\q1\USIS_PythonBot\config.json') as f:
+with open(r'config.json') as f:
     cfg = json.load(f)
+
 
 class BOT(dc.Client):
     def __init__(self, *args, **kwargs):
@@ -30,14 +32,25 @@ class BOT(dc.Client):
         if content == "hi":
             await message.reply("hi!")
 
-        if content == "avatar" or content == "av":
+        if content.startswith("avatar") or content.startswith("av"):
             avatar_url = self.getAvatarURL(message.author)
-            await message.reply(avatar_url)
+            await message.send(message.reply(avatar_url))
+
+        elif content.startswith("me"):
+            # embd =
+            await self.me_richtext(message, message.author)  # message.author
 
     def getAvatarURL(self, user):
         base = "https://cdn.discordapp.com/avatars/"
-        return base+str(user.id)+"/"+str(user.avatar)
+        return base + str(user.id) + "/" + str(user.avatar)
 
+    async def me_richtext(self, message, user, title = "Title", color = 0x00ff00, desc = "Short description"):
+        embd = dc.Embed(title=title, description=desc, color=color)
+        embd.set_image(url=self.getAvatarURL(user))
+        joinDate = user.created_at.strftime("%d, %Y")  # when user created profile
+        embd.add_field(name="Dołączenie", value="Jesteś z nami już od {}".format(joinDate), inline=True)
+        embd.add_field(name="Field2", value="hi2", inline=True)
+        await message.channel.send(embed=embd)
 
 bot_client = BOT()
 bot_client.run(token)
