@@ -1,21 +1,27 @@
-import discord as dc
+import discord as dc 
 from dotenv import load_dotenv
 from os import getenv
+import datetime as dt
 import json
-import datetime
+
+#*#*# pathVariables #*#*#
+config_relative_path = r'2021\q1\USIS_PythonBot\config.json'
+database_relative_path = r'2021\q1\USIS_PythonBot\db.json'
+#*#*#*#*#*#*#*#*#*#*#*#*#
 
 load_dotenv()
-token = getenv("DISCORD_TOKEN")
+token = getenv("TOKEN")
 
-with open(r'config.json') as f:
+with open(config_relative_path) as f:
     cfg = json.load(f)
-
+with open(database_relative_path) as f:
+    db = json.load(f)
 
 class BOT(dc.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prefix = cfg['prefix']
-        # print(type(cfg))
+        self.perms = cfg['perms']
 
     async def on_ready(self):
         for guild in self.guilds:
@@ -25,110 +31,101 @@ class BOT(dc.Client):
     async def on_message(self, message):
         if message.author == self.user:
             return
-        elif message.content.startswith(self.prefix):
+        if message.content.startswith(self.prefix):
             await self.command(message)
-        elif message.content == "prefix":
-            await message.channel.send("Aktualny prefix to `{}`".format(self.prefix))
-        elif message.content == "help":
-            await bot_client.help_command(message=message, user=message.author)
-        else:
-            print('Message <{}> - "{}" -> skipped'.format(message.id, message.content))
+        elif (self.user.name+" ssie") in message.content or (self.user.name+" sucks") in message.content:
+            await message.reply("૮( ᵒ̌▱๋ᵒ̌ )ა ?!")
 
     async def command(self, message):
         content = message.content[len(self.prefix):]
+        args = content.split()[1::] if len(content.split()) > 1 else [None]
+        command = content.split()[0]
+
         if content == "hi":
             await message.reply("hi!")
 
-        elif content.startswith("avatar") or content.startswith("av"):
-            avatar_url = self.getAvatarURL(message.author)
-            await message.channel.send(message.reply(avatar_url))
-
+        # user info embed getter
         elif content.startswith("me"):
-            await self.me_richtext(message, message.author)
+            await self.getMeEmbed(message)
 
-        elif content.startswith("prefix"):
-            content_func = content[7:]  # counting space
-            if content_func.startswith("change"):
-                new_prefix = content_func.split(" ")
-                print(new_prefix, len(new_prefix))
-                if len(new_prefix) == 1:
-                    command_info = f"Zmień prefix podając dodatkowy argument,\n**Przykład**: `{self.prefix}prefix change %`"
-                    return await message.channel.send(command_info)
-                new_prefix = new_prefix[-1]
-                await message.channel.send("Zmieniasz prefix na `{}`".format(new_prefix))
-                # print(new_prefix)
-                await message.channel.send(await bot_client.prefix_change(new_prefix=new_prefix))
-            else:
-                await message.channel.send("Aktualny prefix to `{}`".format(cfg["prefix"]))
+        # role/channel ID getter
+        elif command == "id":
+            if len(args) == 1:
+                if len(message.role_mentions) == 1:
+                    await message.channel.send(f"id: `{message.role_mentions[0].id}`")
+                elif len(message.channel_mentions) == 1:
+                    await message.channel.send(f"id: `{message.channel_mentions[0].id}`")
 
-        elif content.startswith("add"):
-            content_func = content.split(" ")
-            if content_func[1] == "kanał":
-                if content_func[2]:
-                    await self.channel_create()
+        # avatar getter
+        elif command == "avatar" or command == "av" :
+            if message.mentions: 
+                avatar_url = self.getAvatarURL(message.mentions[0])
+            else: avatar_url = self.getAvatarURL(message.author)
+            await message.reply(avatar_url)
+
+        # perms getter/setter
+        elif command == "perms" or command == "permissions":
+            if args[0] == "add":
+                if self.checkPerms(message.author, 2):
+                    try:
+                        lvl = args[1]
+                        roleID = message.channel_mentions[0]
+                    except:
+                        await message.reply(f"{message.author.mention} please specify a permission level and role to assign the permission to.")
                 else:
-                    command_info = "Próbujesz dodać kanał, jako kolejny argument wpisz jego nazwę"
-                    message.channel.send(command_info)
+                    await message.reply("Your permission level is too low to use this command!")
+            else:
+                perm_lvl = self.getUserPerms(message.author)
+                await message.reply(f"your permission level: `{perm_lvl}`")
+        
+        # bot prefix setter
+        elif command == "prefix":
+            if args[0]:
+                self.setPrefix(args[0])
+                await message.channel.send(f"prefix successfully set to: `{args[0]}`")
 
-        elif content.startswith("help"):
-            await self.help_command(message=message, user=message.author)
 
-        else:
-            await message.channel.send("Unknown command, try `help` or `prefix`")
+    def getUserPerms(self, user):
+        lvls = [0]
+        for permLvl in db['rolePerms']:
+            if any([role.id in permLvl.values() for role in user.roles]):
+                lvls.append(int(list(permLvl.keys())[0]))
+        return max(lvls)
 
-    def getAvatarURL(self, user):  # jest w message taki atrybut - user, z niego może wyciągnąć URL?
-        print(user, ' printed avatar')
+    def checkPerms(self, user, perm_lvl):
+        return self.getUserPerms(user) >= perm_lvl
+
+    def getAvatarURL(self, user):
         base = "https://cdn.discordapp.com/avatars/"
-        return base + str(user.id) + "/" + str(user.avatar)
+        return base+str(user.id)+"/"+str(user.avatar)
 
-    async def me_richtext(self, message, user, title="Title", color=0xff0000, desc=None):
-        embd = dc.Embed(title=title)
-        embd.set_image(url=self.getAvatarURL(user))
+    async def getMeEmbed(self, message, user = None):
+        embed = dc.Embed(title="User info")
+        if not user:
+            user = message.author
+        embed.color = user.color
+        embed.set_image(url=self.getAvatarURL(user))
 
-        if desc:
-            embd.description(desc)
+        joined_info = f"Account created on: `{user.joined_at.strftime('%Y, %m, %d')}`"
+        joined_info += f"\nUsed discord for: `{str(dt.datetime.now() - user.joined_at)} days`"
 
-        join_date_date = user.joined_at
-        join_date_string = join_date_date.strftime("%Y, %m, %d")  # when user created profile
-        day_amount = str(datetime.datetime.now() - join_date_date)
-        join_value = "Jesteś z nami już od {}, \nco daje w sumie {}!".format(join_date_string, day_amount)
-
-        roles = []
-        for x in user.roles:
-            if x.name != '@everyone':
-                roles.append(x.mention)
-        if len(roles) == 0:
-            roles = "Nikt Cię nie wtajemniczył?"  # Napisz do {}!".format(dc.Role.mention) wyciąganie z bazy
+        user_roles = [role.name for role in user.roles if role.name != "@everyone"].reverse()
+        if not user_roles:
+            roles_info = "No roles to see here!"
         else:
-            roles.reverse()
-            color = user.color
-            roles = ", ".join(roles)
-        embd.color = color
+            roles_info = ", ".join(user_roles)
 
-        embd.add_field(name="Dołączenie", value=join_value, inline=False)
-        embd.add_field(name="Twoje role:", value=roles, inline=False)
-        # embd.add_field(name=)
-        await message.channel.send(embed=embd)
+        embed.add_field(name="Join Date", value=joined_info, inline=False)
+        embed.add_field(name="User Roles", value=roles_info, inline=False)
+        await message.channel.send(embed=embed)
 
-    async def prefix_change(self, new_prefix):
-        print("Changing prefix - entering method")
+    def setPrefix(self, new_prefix):
         cfg["prefix"] = new_prefix
+        with open(config_relative_path) as f:
+            json.dump(cfg, f)
         self.prefix = new_prefix
-        f = open("config.json", "w")
-        json.dump(cfg, f)
-        f.close()
-        result = "Prefix zmieniono na {}".format(new_prefix)  # by someone
-        print(result, ", exiting method")
-        return result
-
-    async def channel_create(self, message, user):
-        pass
-
-    async def help_command(self, message, user):
-        print(user, ' asked for help')
-        help_list = {'help': 'help_command', 'prefix': ['prefix', 'prefix change'], 'me': 'me_richtext', 'avatar': 'getAvatarURL'}
-        await message.channel.send(help_list)
-
 
 bot_client = BOT()
 bot_client.run(token)
+
+
