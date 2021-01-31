@@ -25,8 +25,10 @@ class BOT(dc.Client):
     async def on_message(self, message):
         if message.author == self.user:
             return
-        if message.content.startswith(self.prefix):
+        elif message.content.startswith(self.prefix):
             await self.command(message)
+        elif message.content == "prefix":
+            await message.channel.send("Aktualny prefix to `{}`".format(self.prefix))
 
     async def command(self, message):
         content = message.content[len(self.prefix):]
@@ -42,14 +44,31 @@ class BOT(dc.Client):
 
         elif content.startswith("prefix"):
             content_func = content[7:]  # uwzględniam spację
-            print(content_func)
+            # print(content_func)
             if content_func.startswith("change"):
-                new_prefix = content_func.split(" ")[-1]
-                await message.channel.send("Zmieniasz prefix na {}".format(new_prefix))
-                print(new_prefix)
+                new_prefix = content_func.split(" ")
+                print(new_prefix, len(new_prefix))
+                if len(new_prefix) == 1:
+                    command_info = f"Zmień prefix podając dodatkowy argument,\n**Przykład**: `{self.prefix}prefix change %`"
+                    return await message.channel.send(command_info)
+                new_prefix = new_prefix[-1]
+                await message.channel.send("Zmieniasz prefix na `{}`".format(new_prefix))
+                # print(new_prefix)
                 await message.channel.send(await bot_client.prefix_change(new_prefix=new_prefix))
             else:
-                await message.channel.send("Aktualny prefix: {}".format(cfg["prefix"]))
+                await message.channel.send("Aktualny prefix to `{}`".format(cfg["prefix"]))
+
+        elif content.startswith("add"):
+            content_func = content.split(" ")
+            if content_func[1] == "kanał":
+                if content_func[2]:
+                    await self.channel_create()
+                else:
+                    command_info = "Próbujesz dodać kanał, jako kolejny argument wpisz jego nazwę"
+                    message.channel.send(command_info)
+
+        else:
+            await message.channel.send("Unknown command, try `help` or `prefix`")
 
     def getAvatarURL(self, user):
         base = "https://cdn.discordapp.com/avatars/"
@@ -91,9 +110,12 @@ class BOT(dc.Client):
         f = open("config.json", "w")
         json.dump(cfg, f)
         f.close()
-        result = "Prefix changed to {}, exiting method".format(new_prefix)  # by someone
-        print(result)
+        result = "Prefix changed to {}".format(new_prefix)  # by someone
+        print(result, ", exiting method")
         return result
+
+    async def channel_create(self, message, user):
+        pass
 
 
 bot_client = BOT()
