@@ -1,39 +1,43 @@
-import os
-import discord
+import discord as dc 
 from dotenv import load_dotenv
+from os import getenv
+import json
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
-client = discord.Client()
+token = getenv("TOKEN")
+
+with open(r'2021\q1\USIS_PythonBot\config.json') as f:
+    cfg = json.load(f)
+
+class BOT(dc.Client):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.prefix = cfg['prefix']
+
+    async def on_ready(self):
+        for guild in self.guilds:
+            print(f"{self.user} connected to {guild.name}, id: {guild.id}")
+        print(f"{self.user.name} is alive!")
+
+    async def on_message(self, message):
+        if message.author == self.user:
+            return
+        if message.content.startswith(self.prefix):
+            await self.command(message)
+
+    async def command(self, message):
+        content = message.content[len(self.prefix):]
+        if content == "hi":
+            await message.reply("hi!")
+
+        if content == "avatar" or content == "av":
+            avatar_url = self.getAvatarURL(message.author)
+            await message.reply(avatar_url)
+
+    def getAvatarURL(self, user):
+        base = "https://cdn.discordapp.com/avatars/"
+        return base+str(user.id)+"/"+str(user.avatar)
 
 
-insult = 'No zarycz no'
-
-
-@client.event
-async def on_ready():
-    print(f'{client.user} has connected to Discord!')
-
-    for guild in client.guilds:
-        if guild.name == GUILD:
-            break
-    print("{} connected to {}, id: {}".format(client.user, guild.name, guild.id))
-
-    members = '\n - '.join([member.name for member in guild.members])
-    print('Guild Members:\n - {}'.format(members))
-    print("Everything done!")
-
-
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
-
-    if message.content == insult:
-        await message.channel.send('ROAAAAAAAAAAAR')
-        print("{} insulted me, couldn't resist".format(guild.members))
-
-
-
-client.run(TOKEN)
+bot_client = BOT()
+bot_client.run(token)
