@@ -5,7 +5,6 @@ import json
 
 load_dotenv()
 token = getenv("DISCORD_TOKEN")
-guild = getenv("DISCORD_GUILD")
 
 with open(r'config.json') as f:
     cfg = json.load(f)
@@ -44,13 +43,14 @@ class BOT(dc.Client):
         base = "https://cdn.discordapp.com/avatars/"
         return base + str(user.id) + "/" + str(user.avatar)
 
-    async def me_richtext(self, message, user, title = "Title", color = 0x00ff00, desc = "Short description"):
+    async def me_richtext(self, message, user, title="Title", color=0x00ff00, desc="Short description"):
         embd = dc.Embed(title=title, description=desc, color=color)
         embd.set_image(url=self.getAvatarURL(user))
         joinDate = user.created_at.strftime("%d, %Y")  # when user created profile
         embd.add_field(name="Dołączenie", value="Jesteś z nami już od {}".format(joinDate), inline=True)
         embd.add_field(name="Field2", value="hi2", inline=True)
         await message.channel.send(embed=embd)
+
 
 bot_client = BOT()
 bot_client.run(token)
