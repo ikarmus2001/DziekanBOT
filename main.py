@@ -29,6 +29,10 @@ class BOT(dc.Client):
             await self.command(message)
         elif message.content == "prefix":
             await message.channel.send("Aktualny prefix to `{}`".format(self.prefix))
+        elif message.content == "help":
+            await bot_client.help_command(message=message, user=message.author)
+        else:
+            print('Message <{}> - "{}" -> skipped'.format(message.id, message.content))
 
     async def command(self, message):
         content = message.content[len(self.prefix):]
@@ -43,8 +47,7 @@ class BOT(dc.Client):
             await self.me_richtext(message, message.author)
 
         elif content.startswith("prefix"):
-            content_func = content[7:]  # uwzględniam spację
-            # print(content_func)
+            content_func = content[7:]  # counting space
             if content_func.startswith("change"):
                 new_prefix = content_func.split(" ")
                 print(new_prefix, len(new_prefix))
@@ -67,10 +70,14 @@ class BOT(dc.Client):
                     command_info = "Próbujesz dodać kanał, jako kolejny argument wpisz jego nazwę"
                     message.channel.send(command_info)
 
+        elif content.startswith("help"):
+            await self.help_command(message=message, user=message.author)
+
         else:
             await message.channel.send("Unknown command, try `help` or `prefix`")
 
-    def getAvatarURL(self, user):
+    def getAvatarURL(self, user):  # jest w message taki atrybut - user, z niego może wyciągnąć URL?
+        print(user, ' printed avatar')
         base = "https://cdn.discordapp.com/avatars/"
         return base + str(user.id) + "/" + str(user.avatar)
 
@@ -110,12 +117,17 @@ class BOT(dc.Client):
         f = open("config.json", "w")
         json.dump(cfg, f)
         f.close()
-        result = "Prefix changed to {}".format(new_prefix)  # by someone
+        result = "Prefix zmieniono na {}".format(new_prefix)  # by someone
         print(result, ", exiting method")
         return result
 
     async def channel_create(self, message, user):
         pass
+
+    async def help_command(self, message, user):
+        print(user, ' asked for help')
+        help_list = {'help': 'help_command', 'prefix': ['prefix', 'prefix change'], 'me': 'me_richtext', 'avatar': 'getAvatarURL'}
+        await message.channel.send(help_list)
 
 
 bot_client = BOT()
