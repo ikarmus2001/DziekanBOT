@@ -1,16 +1,16 @@
-import discord as dc
+import discord as dc 
 from dotenv import load_dotenv
 from os import getenv
 import datetime as dt
 import json
-
-# *#*# pathVariables #*#*#
-config_relative_path = r'config.json'
-database_relative_path = r'db.json'
-# *#*#*#*#*#*#*#*#*#*#*#*#
-
 load_dotenv()
+
+#*#*#*# variables #*#*#*#
+config_relative_path = getenv("CONFIG")
+database_relative_path = getenv("DATABASE")
 token = getenv("TOKEN")
+#*#*#*#*#*#*#*#*#*#*#*#*#
+
 
 with open(config_relative_path) as f:
     cfg = json.load(f)
@@ -47,7 +47,10 @@ class BOT(dc.Client):
 
         # user info embed getter
         elif content.startswith("me"):
-            await self.getMeEmbed(message)
+            if len(message.mentions) == 1:
+                await self.getMeEmbed(message, message.mentions[0])
+            else:
+                await self.getMeEmbed(message)
 
         # role/channel ID getter
         elif command == "id":
@@ -56,6 +59,8 @@ class BOT(dc.Client):
                     await message.channel.send(f"id: `{message.role_mentions[0].id}`")
                 elif len(message.channel_mentions) == 1:
                     await message.channel.send(f"id: `{message.channel_mentions[0].id}`")
+                elif len(message.mentions) == 1:
+                    await message.channel.send(f"id: `{message.mentions[0].id}`")
 
         # avatar getter
         elif command == "avatar" or command == "av":
@@ -73,8 +78,7 @@ class BOT(dc.Client):
                         lvl = args[1]
                         role_id = message.channel_mentions[0]
                     except:
-                        await message.reply(
-                            f"{message.author.mention} please specify a permission level and role to assign the permission to.")
+                        await message.reply(f"{message.author.mention} please specify a permission level and role to assign the permission to.")
                 else:
                     await message.reply("Your permission level is too low to use this command!")
             else:
@@ -87,12 +91,16 @@ class BOT(dc.Client):
                 self.setPrefix(args[0])
                 await message.channel.send(f"Prefix successfully set to: `{args[0]}`")
 
-        # ranking checker
-        elif command == "ranking":
-            if args[0] is None:
-                await self.ranking_top5(message=message, user=message.author)
-            else:
-                await self.ranking_all(message=message, user=message.author)
+        # leaderboard getter
+        elif command == "leaderboard":
+            lb_len = 5
+            if args[0]:
+                try:
+                    lb_len = int(args[0])
+                except:
+                    await message.reply(f"Please specify the leaderboard lenght like: `{self.prefix}leaderboard 10`")
+            lb = self.getLeaderboard(message.guild, lb_len)
+            await message.channel.send(lb)
 
     def getUserPerms(self, user):
         lvls = [0]
@@ -108,15 +116,15 @@ class BOT(dc.Client):
         base = "https://cdn.discordapp.com/avatars/"
         return base + str(user.id) + "/" + str(user.avatar)
 
-    async def getMeEmbed(self, message, user=None):
+    async def getMeEmbed(self, message, user = None):
         embed = dc.Embed(title="User info")
         if not user:
             user = message.author
         embed.color = user.color
         embed.set_image(url=self.getAvatarURL(user))
 
-        joined_info = f"Account created on: `{user.joined_at.strftime('%Y, %m, %d')}`"
-        joined_info += f"\nUsed discord for: `{str(dt.datetime.now() - user.joined_at)} days`"
+        joined_info = f"Joined server on `{user.joined_at.strftime('%d/%m/%Y')}`"
+        joined_info += f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
 
         user_roles = [role.name for role in user.roles if role.name != "@everyone"].reverse()
         if not user_roles:
@@ -137,72 +145,18 @@ class BOT(dc.Client):
             json.dump(cfg, f)
         self.prefix = new_prefix
 
-    # Boże pisząc to miałem taki wylew, nie oceniaj plox
-    def ranking_top5(self, message, user=None):
-        if not user:
-            user = message.author
-        ranking_db = db["ranking"]
-        tmp = [[self.get_user(k), points] for k in ranking_db for points in ranking_db[k[1]]]
-        # tu mam problem z podwójną pętlą, nie widzi k czy może bardziej prawdopodobne - nie umiem >:(
-        top1 = 0
-        top2 = 0
-        top3 = 0
-        top4 = 0
-        top5 = 0
-        # Nie wziąłem pod uwagę możliwości "remisu" / ex aequo, trzeba to dopisać koniecznie
-        # Jezus co za koszmar, na pewno kiedyś ktoś mądrzejszy to poprawi (może nawet to będę ja z przyszłości!)
-        for x in tmp[[1]]:
-            if x < top5:
-                continue
-            elif x < top4:
-                top5 = x
-                continue
-            elif x < top3:
-                top5 = top4
-                top4 = x
-                continue
-            elif x < top2:
-                top5 = top4
-                top4 = top3
-                top3 = x
-                continue
-            elif x < top1:
-                top5 = top4
-                top4 = top3
-                top3 = top2
-                top2 = x
-                continue
-            else:
-                top5 = top4
-                top4 = top3
-                top3 = top2
-                top2 = top1
-                top1 = x
-        for y in tmp:
-            if user == y[0]:
-                placeholder = y[1]
-        topka = [top1, top2, top3, top4, top5]
-        print(topka)
-
-        ordinals = [0, "st", "nd", "rd", "th"]
-        for x in len(ordinals):
-            print("x = ", x)
-            if placeholder > 3:
-                ordinal = ordinals[4]
-                break
-            elif placeholder == x:
-                ordinal = ordinals[x]
-                print(ordinal)
-                break
-        result = f'Right now you are `{placeholder}{ordinal}`'
-        embed = dc.Embed(title="Ranking")
-        embed.add_field(name="Top 5", value=topka)
-        embed.add_field(name="Your place", value=result)
-        return message.channel.send(embed=embed)
-
-    def ranking_all(self, message, user=None):
-        pass
-
+    def getLeaderboard(self, guild, lenght = 5):
+        ranking = db["ranking"]
+        ranking.sort(key = lambda x: x["exp"], reverse = True)
+        lb = ""
+        r=1
+        for i in range(min(len(ranking), lenght, 15)):
+            user = ranking[i]
+            if not guild.get_member(user['id']):
+                lb+=f"#{r} {guild.get_member(user['id'])}: {user.get('exp')}\n"
+                r+=1
+        print(lb)
+        return lb
 
 bot_client = BOT()
 bot_client.run(token)
