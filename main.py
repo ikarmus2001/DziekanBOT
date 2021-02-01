@@ -83,9 +83,9 @@ class BOT(dc.Client):
 
         # bot prefix setter
         elif command == "prefix":
-            if args[1]:
-                self.setPrefix(args[1])
-                await message.channel.send(f"Prefix successfully set to: `{args[1]}`")
+            if args[0]:
+                self.setPrefix(args[0])
+                await message.channel.send(f"Prefix successfully set to: `{args[0]}`")
 
         # ranking checker
         elif command == "ranking":
