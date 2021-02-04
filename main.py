@@ -42,18 +42,34 @@ class BOT(dc.Client):
         args = content.split()[1::] if len(content.split()) > 1 else [None]
         command = content.split()[0]
 
-        if content == "hi":
-            await message.reply("hi!")
+        # say command 
+        if command == "say" and await self.checkPerms(message, "say"):
+            await message.delete()
+            if any(args):
+                await message.channel.send(" ".join([arg for arg in args]))
+
+        # message purge 
+        elif command == "purge" and await self.checkPerms(message, "purge"):
+            try:
+                delRan = int(args[0])
+            except:
+                await message.reply("Please specify how many messages to purge.")
+            else:
+                if delRan in range(1,51):
+                    await message.channel.purge(limit=delRan+1, bulk=True)
+                else:
+                    await message.reply("Purge amount must be in range from `1` to `50`.")
+
 
         # user info embed getter
-        elif content.startswith("me"):
+        elif content.startswith("me") and await self.checkPerms(message, "me"):
             if len(message.mentions) == 1:
                 await self.getMeEmbed(message, message.mentions[0])
             else:
                 await self.getMeEmbed(message)
 
         # role/channel ID getter
-        elif command == "id":
+        elif command == "id" and await self.checkPerms(message, "id"):
             if len(args) == 1:
                 if len(message.role_mentions) == 1:
                     await message.channel.send(f"id: `{message.role_mentions[0].id}`")
@@ -63,7 +79,7 @@ class BOT(dc.Client):
                     await message.channel.send(f"id: `{message.mentions[0].id}`")
 
         # avatar getter
-        elif command == "avatar" or command == "av":
+        elif command == "avatar" or command == "av" and await self.checkPerms(message, "avatar"):
             if message.mentions:
                 avatar_url = self.getAvatarURL(message.mentions[0])
             else:
@@ -71,28 +87,50 @@ class BOT(dc.Client):
             await message.reply(avatar_url)
 
         # perms getter/setter
-        elif command == "perms" or command == "permissions":
-            if args[0] == "add":
-                if self.checkPerms(message.author, 2):
-                    try:
-                        lvl = args[1]
-                        role_id = message.channel_mentions[0]
-                    except:
-                        await message.reply(f"{message.author.mention} please specify a permission level and role to assign the permission to.")
+        elif command == "perms" or command == "permissions" and await self.checkPerms(message, "permissions"):
+            if args[0] == "set" and len(args) == 3 and await self.checkPerms(message, "permissions_manage"):
+                try:
+                    lvl = int(args[2])
+                    if len(message.role_mentions) == 1:
+                        role_id = message.raw_role_mentions[0]
+                    else: 
+                        role_id = args[1]
+                except:
+                    await message.reply(f"Please specify a permission level and role to assign the permission to.")
                 else:
-                    await message.reply("Your permission level is too low to use this command!")
-            else:
+                    if lvl not in range(1,3):
+                        await message.reply("Perms level can only be 1 or 2")
+                    else:
+                        if self.managePerms("set", level=lvl, role=role_id):
+                            await message.reply("Role permission changed successfully")
+                        else:
+                            await message.reply("Error occured while changing role permissions.")
+
+            elif (args[0] == "delete" or args[0] == "del") and await self.checkPerms(message, "permissions_manage"):
+                if len(args) == 2:
+                    if len(message.role_mentions) == 1:
+                        role_id = message.raw_role_mentions[0]
+                    else: 
+                        role_id = args[1]
+                    if self.managePerms("delete", role=role_id):
+                        await message.reply("Role permission deleted successfully")
+                    else:
+                        await message.reply("Error occured while deleting role permissions.")
+                else:
+                    await message.reply(f"Please specify a role to delete the permission from.")
+                    
+            elif not any(args):
                 perm_lvl = self.getUserPerms(message.author)
-                await message.reply(f"Your permission level: `{perm_lvl}`")
+                await message.reply(f"Your permission level: `{perm_lvl if perm_lvl < 3 else 'GOD'}`")
 
         # bot prefix setter
-        elif command == "prefix":
+        elif command == "prefix" and await self.checkPerms(message, "prefix"):
             if args[0]:
                 self.setPrefix(args[0])
                 await message.channel.send(f"Prefix successfully set to: `{args[0]}`")
 
         # leaderboard getter
-        elif command == "leaderboard":
+        elif command == "leaderboard" and await self.checkPerms(message, "leaderboard"):
             lb_len = 5
             if args[0]:
                 try:
@@ -104,13 +142,22 @@ class BOT(dc.Client):
 
     def getUserPerms(self, user):
         lvls = [0]
-        for permLvl in db['rolePerms']:
-            if any([role.id in permLvl.values() for role in user.roles]):
-                lvls.append(int(list(permLvl.keys())[0]))
-        return max(lvls)
+        for pLvl, pRoles in db['permRoles'].items():
+            if any([role.id in pRoles for role in user.roles]):
+                lvls.append(int(pLvl))
+        permLevel = max(lvls)
+        return permLevel
 
-    def checkPerms(self, user, perm_lvl):
-        return self.getUserPerms(user) >= perm_lvl
+    async def checkPerms(self, message, command):
+        try:
+            required = cfg["perms"][command]
+        except:
+            required = float('infinity')
+        if self.getUserPerms(message.author) >= required:
+            return True
+        else:
+            await message.reply("You don't have the permission to use this command.")
+            return False
 
     def getAvatarURL(self, user):
         base = "https://cdn.discordapp.com/avatars/"
@@ -126,8 +173,9 @@ class BOT(dc.Client):
         joined_info = f"Joined server on `{user.joined_at.strftime('%d/%m/%Y')}`"
         joined_info += f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
 
-        user_roles = [role.name for role in user.roles if role.name != "@everyone"].reverse()
-        if not user_roles:
+        print(user.roles)
+        user_roles = [role.mention for role in user.roles if role.name != "@everyone"]
+        if not any(user_roles):
             roles_info = "No roles to see here!"
         else:
             roles_info = ", ".join(user_roles)
@@ -139,10 +187,14 @@ class BOT(dc.Client):
         # embed.add_field(name="Ranking", value=ranking_info, inline=False)
         await message.channel.send(embed=embed)
 
+    def saveDatabase(self):
+        with open(database_relative_path, mode="w") as f:
+            json.dump(db, f, indent=4)
+
     def setPrefix(self, new_prefix):
         cfg["prefix"] = new_prefix
         with open(config_relative_path, mode="w") as f:
-            json.dump(cfg, f)
+            json.dump(cfg, f, indent=4)
         self.prefix = new_prefix
 
     def getLeaderboard(self, guild, lenght = 5):
@@ -157,6 +209,37 @@ class BOT(dc.Client):
                 r+=1
         print(lb)
         return lb
+
+    def managePerms(self, command, **args):
+        if command == "set":
+            try:
+                level = args["level"]
+                role = args["role"]
+            except:
+                return False
+            else:
+                for pLvl, pRoles in db["permRoles"].items():
+                    if role in pRoles:
+                        if int(pLvl) == level:
+                            return True
+                        db["permRoles"][pLvl] = [r for r in db["permRoles"][pLvl] if r != role]
+                        break
+                db["permRoles"][str(level)].append(role)
+                self.saveDatabase()
+                return True
+        elif command == "delete":
+            try:
+                role = args["role"]
+            except:
+                return False
+            else:
+                for pLvl, pRoles in db["permRoles"].items():
+                    if role in pRoles:
+                        db["permRoles"][pLvl] = [r for r in db["permRoles"][pLvl] if r != role]
+                        self.saveDatabase()
+                        return True
+                return False
+                        
 
 bot_client = BOT()
 bot_client.run(token)
