@@ -29,9 +29,11 @@ class BOT(dc.Client):
             print(f"{self.user} connected to {guild.name}, id: {guild.id}")
         print(f"{self.user.name} is alive!")
 
+
     async def on_message(self, message):
         if message.author == self.user:
             return
+
         if message.content.startswith(self.prefix):
             await self.command(message)
         elif (self.user.name + " ssie") in message.content or (self.user.name + " sucks") in message.content:
@@ -139,6 +141,7 @@ class BOT(dc.Client):
                     await message.reply(f"Please specify the leaderboard lenght like: `{self.prefix}leaderboard 10`")
             lb = self.getLeaderboard(message.guild, lb_len)
             await message.channel.send(lb)
+        await BOT.logCommand(self, message, command)
 
     def getUserPerms(self, user):
         lvls = [0]
@@ -239,7 +242,17 @@ class BOT(dc.Client):
                         self.saveDatabase()
                         return True
                 return False
-                        
+
+    async def logCommand(self, message, command):
+
+        # `Ktoś` użył `komenda` na `tam`
+
+        log_value = cfg['log_channel_id']  # zainicjować przy starcie bota
+        log_channel = BOT.get_channel(self=self, id=log_value)
+        w = print(log_channel.id, log_channel.name)
+        user = message.author
+        await log_channel.send(f"{user.mention} użył `{command}` na {message.channel.mention}")
+
 
 bot_client = BOT()
 bot_client.run(token)
