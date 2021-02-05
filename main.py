@@ -143,6 +143,14 @@ class BOT(dc.Client):
             await message.channel.send(lb)
         await BOT.logCommand(self, message, command)
 
+        # change log channel
+        if command == "log" and await self.checkPerms(message, "log"):
+            if args[0] == "change" and len(args) == 2:
+                await message.reply(await self.changeLogChannel(message=message, channel=args[1]))
+            else:
+                await message.reply(f"Coś się zepsuło - chnl = {args[1]}")
+
+
     def getUserPerms(self, user):
         lvls = [0]
         for pLvl, pRoles in db['permRoles'].items():
@@ -249,9 +257,18 @@ class BOT(dc.Client):
 
         log_value = cfg['log_channel_id']  # zainicjować przy starcie bota
         log_channel = BOT.get_channel(self=self, id=log_value)
-        w = print(log_channel.id, log_channel.name)
-        user = message.author
-        await log_channel.send(f"{user.mention} użył `{command}` na {message.channel.mention}")
+        # w = print(log_channel.id, log_channel.name)
+        # user = message.author
+        await log_channel.send(f"{message.author.mention} użył `{command}` na {message.channel.mention}")
+
+    async def changeLogChannel(self, message, channel):
+        channel = dc.utils.get(dc.Guild.channels, name=channel) #, type="ChannelType.text") # guild__name=message.guild
+        cfg["log_channel_id"] = channel.id
+        with open(config_relative_path, mode="w") as f:
+            json.dump(cfg, f, indent=4)
+        result_string = f'Log channel changed to {channel.name}'
+        print(f'Log channel changed to {channel.name}')
+        return result_string
 
 
 bot_client = BOT()
