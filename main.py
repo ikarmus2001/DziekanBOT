@@ -70,15 +70,17 @@ class BOT(dc.Client):
             else:
                 await self.getMeEmbed(message)
 
-        # role/channel ID getter
+        # role/channel ID getter, may add chaining id's, unnecessary for now
         elif command == "id" and await self.checkPerms(message, "id"):
-            if len(args) == 1:
+            if args[0] != None:
                 if len(message.role_mentions) == 1:
                     await message.channel.send(f"id: `{message.role_mentions[0].id}`")
                 elif len(message.channel_mentions) == 1:
                     await message.channel.send(f"id: `{message.channel_mentions[0].id}`")
                 elif len(message.mentions) == 1:
                     await message.channel.send(f"id: `{message.mentions[0].id}`")
+            else:
+                await message.channel.send(f'syntax: `{self.prefix}id role / channel / mention`, returns id')
 
         # avatar getter
         elif command == "avatar" or command == "av" and await self.checkPerms(message, "avatar"):
@@ -143,11 +145,16 @@ class BOT(dc.Client):
             await message.channel.send(lb)
 
         # change log channel
-        if command == "log" and await self.checkPerms(message, "log"):
+        elif command == "log" and await self.checkPerms(message, "log"):
             if args[0] == "change" and len(args) == 2:
                 await message.reply(await self.changeLogChannel(message=message, channel=args[1]))
             else:
-                await message.reply(f"Coś się zepsuło - chnl = {args[1]}")
+                await message.reply(f"Something is wrong - chnl = {args[1]}")
+
+        # new semester
+        elif command == "newSemester" and await self.checkPerms(message, "newSemester"):
+            await message.reply(f"Are you sure? `{self.prefix}Yes` or `{self.prefix}No`")
+        #         eee nie mam pomysłu na dalej sry
 
         # log chhanges
         await BOT.logCommand(self, message, command)
@@ -259,8 +266,6 @@ class BOT(dc.Client):
 
         log_value = cfg['log_channel_id']  # zainicjować przy starcie bota
         log_channel = BOT.get_channel(self=self, id=log_value)
-        # w = print(log_channel.id, log_channel.name)
-        # user = message.author
         await log_channel.send(f"{message.author.mention} użył `{command}` na {message.channel.mention}")
 
     async def changeLogChannel(self, message, channel):
@@ -273,8 +278,10 @@ class BOT(dc.Client):
         with open(config_relative_path, mode="w") as f:
             json.dump(cfg, f, indent=4)
         result_string = f'Log channel changed to {channel}'
-        # print(f'Log channel changed to {channel.name}')
         return result_string
+
+    def newSemester(self, message):
+
 
 
 bot_client = BOT()
