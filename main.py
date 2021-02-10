@@ -95,7 +95,7 @@ class BOT(dc.Client):
                     lvl = int(args[2])
                     if len(message.role_mentions) == 1:
                         role_id = message.raw_role_mentions[0]
-                    else: 
+                    else:
                         role_id = args[1]
                 except:
                     await message.reply(f"Please specify a permission level and role to assign the permission to.")
@@ -112,7 +112,7 @@ class BOT(dc.Client):
                 if len(args) == 2:
                     if len(message.role_mentions) == 1:
                         role_id = message.raw_role_mentions[0]
-                    else: 
+                    else:
                         role_id = args[1]
                     if self.managePerms("delete", role=role_id):
                         await message.reply("Role permission deleted successfully")
@@ -120,7 +120,7 @@ class BOT(dc.Client):
                         await message.reply("Error occured while deleting role permissions.")
                 else:
                     await message.reply(f"Please specify a role to delete the permission from.")
-                    
+
             elif not any(args):
                 perm_lvl = self.getUserPerms(message.author)
                 await message.reply(f"Your permission level: `{perm_lvl if perm_lvl < 3 else 'GOD'}`")
@@ -141,7 +141,6 @@ class BOT(dc.Client):
                     await message.reply(f"Please specify the leaderboard lenght like: `{self.prefix}leaderboard 10`")
             lb = self.getLeaderboard(message.guild, lb_len)
             await message.channel.send(lb)
-        await BOT.logCommand(self, message, command)
 
         # change log channel
         if command == "log" and await self.checkPerms(message, "log"):
@@ -149,6 +148,9 @@ class BOT(dc.Client):
                 await message.reply(await self.changeLogChannel(message=message, channel=args[1]))
             else:
                 await message.reply(f"Coś się zepsuło - chnl = {args[1]}")
+
+        # log chhanges
+        await BOT.logCommand(self, message, command)
 
 
     def getUserPerms(self, user):
@@ -262,12 +264,16 @@ class BOT(dc.Client):
         await log_channel.send(f"{message.author.mention} użył `{command}` na {message.channel.mention}")
 
     async def changeLogChannel(self, message, channel):
-        channel = dc.utils.get(dc.Guild.channels, name=channel) #, type="ChannelType.text") # guild__name=message.guild
-        cfg["log_channel_id"] = channel.id
+        guild_var = BOT.get_guild(self, id=cfg["guild_id"])
+        for x in guild_var.channels:
+            if x.name == channel:
+                channel_obj = x
+                break
+        cfg["log_channel_id"] = channel_obj.id
         with open(config_relative_path, mode="w") as f:
             json.dump(cfg, f, indent=4)
-        result_string = f'Log channel changed to {channel.name}'
-        print(f'Log channel changed to {channel.name}')
+        result_string = f'Log channel changed to {channel}'
+        # print(f'Log channel changed to {channel.name}')
         return result_string
 
 
