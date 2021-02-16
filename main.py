@@ -23,17 +23,17 @@ class BOT(dc.Client):
         super().__init__(*args, **kwargs)
         self.prefix = cfg['prefix']
         self.perms = cfg['perms']
+        self.debugging = db['debugMode']
 
     async def on_ready(self):
+        await self.loadLogsChannel()
         for guild in self.guilds:
             print(f"{self.user} connected to {guild.name}, id: {guild.id}")
         print(f"{self.user.name} is alive!")
 
-
     async def on_message(self, message):
         if message.author == self.user:
             return
-
         if message.content.startswith(self.prefix):
             await self.command(message)
         elif (self.user.name + " ssie") in message.content or (self.user.name + " sucks") in message.content:
@@ -44,8 +44,7 @@ class BOT(dc.Client):
         args = content.split()[1::] if len(content.split()) > 1 else [None]
         command = content.split()[0]
 
-
-        # say command
+        # say command 
         if command == "say" and await self.checkPerms(message, "say"):
             await message.delete()
             if any(args):
@@ -60,27 +59,27 @@ class BOT(dc.Client):
             else:
                 if delRan in range(1,51):
                     await message.channel.purge(limit=delRan+1, bulk=True)
+                    if self.logsActive: await self.log(message)
                 else:
                     await message.reply("Purge amount must be in range from `1` to `50`.")
 
-        # user info embed getter
-        elif content.startswith("me") and await self.checkPerms(message, "me"):
-            if len(message.mentions) == 1:
-                await self.getMeEmbed(message, message.mentions[0])
-            else:
-                await self.getMeEmbed(message)
 
-        # role/channel ID getter, may add chaining id's, unnecessary for now
+        # user info embed getter
+        elif command == "me" and await self.checkPerms(message, "me"):
+            if len(message.mentions) == 1:
+                await message.channel.send(embed=self.getMeEmbed(message, message.mentions[0]))
+            else:
+                await message.channel.send(embed=self.getMeEmbed(message))
+
+        # role/channel ID getter
         elif command == "id" and await self.checkPerms(message, "id"):
-            if args[0] != None:
+            if len(args) == 1:
                 if len(message.role_mentions) == 1:
                     await message.channel.send(f"id: `{message.role_mentions[0].id}`")
                 elif len(message.channel_mentions) == 1:
                     await message.channel.send(f"id: `{message.channel_mentions[0].id}`")
                 elif len(message.mentions) == 1:
                     await message.channel.send(f"id: `{message.mentions[0].id}`")
-            else:
-                await message.channel.send(f'syntax: `{self.prefix}id role / channel / mention`, returns id')
 
         # avatar getter
         elif command == "avatar" or command == "av" and await self.checkPerms(message, "avatar"):
@@ -97,7 +96,7 @@ class BOT(dc.Client):
                     lvl = int(args[2])
                     if len(message.role_mentions) == 1:
                         role_id = message.raw_role_mentions[0]
-                    else:
+                    else: 
                         role_id = args[1]
                 except:
                     await message.reply(f"Please specify a permission level and role to assign the permission to.")
@@ -107,6 +106,7 @@ class BOT(dc.Client):
                     else:
                         if self.managePerms("set", level=lvl, role=role_id):
                             await message.reply("Role permission changed successfully")
+                            if self.logsActive: await self.log(message)
                         else:
                             await message.reply("Error occured while changing role permissions.")
 
@@ -114,15 +114,16 @@ class BOT(dc.Client):
                 if len(args) == 2:
                     if len(message.role_mentions) == 1:
                         role_id = message.raw_role_mentions[0]
-                    else:
+                    else: 
                         role_id = args[1]
                     if self.managePerms("delete", role=role_id):
+                        if self.logsActive: await self.log(message)
                         await message.reply("Role permission deleted successfully")
                     else:
                         await message.reply("Error occured while deleting role permissions.")
                 else:
                     await message.reply(f"Please specify a role to delete the permission from.")
-
+                    
             elif not any(args):
                 perm_lvl = self.getUserPerms(message.author)
                 await message.reply(f"Your permission level: `{perm_lvl if perm_lvl < 3 else 'GOD'}`")
@@ -132,6 +133,7 @@ class BOT(dc.Client):
             if args[0]:
                 self.setPrefix(args[0])
                 await message.channel.send(f"Prefix successfully set to: `{args[0]}`")
+                if self.logsActive: await self.log(message)
 
         # leaderboard getter
         elif command == "leaderboard" and await self.checkPerms(message, "leaderboard"):
@@ -144,12 +146,40 @@ class BOT(dc.Client):
             lb = self.getLeaderboard(message.guild, lb_len)
             await message.channel.send(lb)
 
-        # change log channel
-        elif command == "log" and await self.checkPerms(message, "log"):
-            if args[0] == "change" and len(args) == 2:
-                await message.reply(await self.changeLogChannel(message=message, channel=args[1]))
-            else:
-                await message.reply(f"Something is wrong - chnl = {args[1]}")
+        # debug mode 
+        elif (command == "debug" or command == "debugging") and await self.checkPerms(message, "debugging"):
+            if args[0] == "on" or args[0] == "true" or args[0] == "1":
+                self.debugging = db['debugMode'] = True
+                self.saveDatabase()
+                if self.logsActive: await self.log(message)
+                await message.reply("Debugging mode has been successfully turned `on`")
+                
+            elif args[0] == "off" or args[0] == "false" or args[0] == "0":
+                self.debugging = db['debugMode'] = False
+                self.saveDatabase()
+                if self.logsActive: await self.log(message)
+                await message.reply("Debugging mode has been successfully turned `off`")
+
+        # logs manage
+        elif command == "logs" and await self.checkPerms(message, "logs"):
+            if args[0] == "set":
+                if len(args) == 2 and len(message.channel_mentions) == 1:
+                    await self.setLogsChannel(message.channel_mentions[0].id)
+                    await message.reply(f"Logs channel successfully set to {message.channel_mentions[0].mention}")
+                else:
+                    await message.reply(f"Please specify a log channel like: `{self.prefix}logs set #someLogsChannel`")
+            elif len(args) == 1 and (args[0] == "on" or args[0] == "true" or args[0] == "1"):
+                self.logsActive = True
+                db['logs']['active'] = True
+                self.saveDatabase()
+                if self.logsActive: await self.log(message)
+                await message.reply("Logs are now turned `on`")
+            elif len(args) == 1 and (args[0] == "off" or args[0] == "false" or args[0] == "0"):
+                if self.logsActive: await self.log(message)
+                self.logsActive = False
+                db['logs']['active'] = False
+                self.saveDatabase()
+                await message.reply("Logs are now turned `off`")
 
         # new semester
         elif command == "newSemester" and await self.checkPerms(message, "newSemester"):
@@ -165,10 +195,26 @@ class BOT(dc.Client):
         elif command == "No":
             newSemFlag = False
 
-        # log changes
-        await BOT.logCommand(self, message, command)
+    # *=*=*=*=*=*=*=*=* COMMANDS *=*=*=*=*=*=*=*=* #
 
-    # KONIEC ON_COMMAND ***********************************************************************************************
+    def saveDatabase(self):
+        with open(database_relative_path, mode="w") as f:
+            json.dump(db, f, indent=4)
+
+    async def loadLogsChannel(self):
+        channel = await self.fetch_channel(db['logs']['id'])
+        if channel: 
+            self.logsChannel = channel
+            self.logsActive = db['logs']['active']
+        else:
+            self.logsActive = db['logs']['active'] = False
+            self.saveDatabase()
+            print("Logs channel could not be found by id -- Logs were turned off.")
+
+    async def setLogsChannel(self, channel_id):
+        db['logs']['id'] = channel_id
+        self.saveDatabase()
+        await self.loadLogsChannel()
 
     def getUserPerms(self, user):
         lvls = [0]
@@ -176,9 +222,14 @@ class BOT(dc.Client):
             if any([role.id in pRoles for role in user.roles]):
                 lvls.append(int(pLvl))
         permLevel = max(lvls)
+        if permLevel == 0 and self.debugging: return -1
         return permLevel
 
     async def checkPerms(self, message, command):
+        perm_lvl = self.getUserPerms(message.author)
+        if self.debugging and perm_lvl == -1: 
+            await message.reply("Can't use commands while bot is in debugging mode.")
+            return False
         try:
             required = cfg["perms"][command]
         except:
@@ -193,7 +244,7 @@ class BOT(dc.Client):
         base = "https://cdn.discordapp.com/avatars/"
         return base + str(user.id) + "/" + str(user.avatar)
 
-    async def getMeEmbed(self, message, user = None):
+    def getMeEmbed(self, message, user = None):
         embed = dc.Embed(title="User info")
         if not user:
             user = message.author
@@ -203,7 +254,6 @@ class BOT(dc.Client):
         joined_info = f"Joined server on `{user.joined_at.strftime('%d/%m/%Y')}`"
         joined_info += f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
 
-        print(user.roles)
         user_roles = [role.mention for role in user.roles if role.name != "@everyone"]
         if not any(user_roles):
             roles_info = "No roles to see here!"
@@ -215,11 +265,7 @@ class BOT(dc.Client):
         embed.add_field(name="Join Date", value=joined_info, inline=False)
         embed.add_field(name="User Roles", value=roles_info, inline=False)
         # embed.add_field(name="Ranking", value=ranking_info, inline=False)
-        await message.channel.send(embed=embed)
-
-    def saveDatabase(self):
-        with open(database_relative_path, mode="w") as f:
-            json.dump(db, f, indent=4)
+        return embed
 
     def setPrefix(self, new_prefix):
         cfg["prefix"] = new_prefix
@@ -270,27 +316,21 @@ class BOT(dc.Client):
                         return True
                 return False
 
-    async def logCommand(self, message, command):
+    async def log(self, message):
+        case = db['logs']['cases']
+        db['logs']['cases'] = case+1
+        self.saveDatabase()
 
-        # `Ktoś` użył `komenda` na `tam`
+        embed = dc.Embed(title=f"Log Case #{case}")
+        embed.color = message.author.color
 
-        log_value = cfg['log_channel_id']  # zainicjować przy starcie bota
-        log_channel = BOT.get_channel(self=self, id=log_value)
-        await log_channel.send(f"{message.author.mention} użył `{command}` na {message.channel.mention}")
+        embed.add_field(name="Author", value=message.author.mention, inline=True)
+        embed.add_field(name="Date", value=dt.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), inline=True)
 
-    async def changeLogChannel(self, message, channel):
-        guild_var = BOT.get_guild(self, id=cfg["guild_id"])
-        for x in guild_var.channels:
-            if x.name == channel:
-                channel_obj = x
-                break
-        cfg["log_channel_id"] = channel_obj.id
-        with open(config_relative_path, mode="w") as f:
-            json.dump(cfg, f, indent=4)
-        result_string = f'Log channel changed to {channel}'
-        return result_string
+        embed.add_field(name="Command", value=f"`{message.content}`", inline=False)
+        await self.logsChannel.send(embed=embed)
 
-    def newSemester(self, message):
+    async def newSemester(self, message):
         # https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.edit
         # a no tentego i trzeba dodać więcej opcji (argumentó)
         # Trzeba najpierw przenosić kanały, dopiero usuwać kategorie
@@ -311,10 +351,7 @@ class BOT(dc.Client):
         # omatko trzeba jeszcze pododawać role, dodać rolę archiwum
 
 #         zmiana kanału do logów
-
-
-
-
+                        
 
 bot_client = BOT()
 bot_client.run(token)

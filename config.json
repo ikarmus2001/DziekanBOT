@@ -1,18 +1,17 @@
 {
-    "prefix": "!",
+    "prefix": "//", 
     "perms": {
         "say": 0,
-        "me": 0,
+        "me":  0,
         "avatar": 0,
         "leaderboard": 0,
-        "permissions": 0,
-        "purge": 1,
+        "permissions": 0, 
         "id": 1,
+        "purge": 1,
         "permissions_manage": 2,
         "prefix": 2,
-        "log": 2,
-        "newSemester": 3
-    },
-    "log_channel_id": 804761014431645740,
-    "guild_id": 804761014431645736
+        "logs": 3,
+        "newSemester": 3,
+        "debugging": 3
+    }
 }
