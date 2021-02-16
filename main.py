@@ -44,7 +44,8 @@ class BOT(dc.Client):
         args = content.split()[1::] if len(content.split()) > 1 else [None]
         command = content.split()[0]
 
-        # say command 
+
+        # say command
         if command == "say" and await self.checkPerms(message, "say"):
             await message.delete()
             if any(args):
@@ -61,7 +62,6 @@ class BOT(dc.Client):
                     await message.channel.purge(limit=delRan+1, bulk=True)
                 else:
                     await message.reply("Purge amount must be in range from `1` to `50`.")
-
 
         # user info embed getter
         elif content.startswith("me") and await self.checkPerms(message, "me"):
@@ -154,11 +154,21 @@ class BOT(dc.Client):
         # new semester
         elif command == "newSemester" and await self.checkPerms(message, "newSemester"):
             await message.reply(f"Are you sure? `{self.prefix}Yes` or `{self.prefix}No`")
-        #         eee nie mam pomysłu na dalej sry
+            newSemFlag = True
 
-        # log chhanges
+        elif command == "Yes" and await self.checkPerms(message, "newSemester"):
+            if newSemFlag == True:
+                newSemester(self, message)
+                newSemFlag == False
+                print("New sem has begun")
+
+        elif command == "No":
+            newSemFlag = False
+
+        # log changes
         await BOT.logCommand(self, message, command)
 
+    # KONIEC ON_COMMAND ***********************************************************************************************
 
     def getUserPerms(self, user):
         lvls = [0]
@@ -281,6 +291,28 @@ class BOT(dc.Client):
         return result_string
 
     def newSemester(self, message):
+        # https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.edit
+        # a no tentego i trzeba dodać więcej opcji (argumentó)
+        # Trzeba najpierw przenosić kanały, dopiero usuwać kategorie
+        # if czy jest już kanał o tej nazwie
+        newSemName = "OldSem"
+        await dc.Guild.create_category(name=newSemName, position=-1) # ciekawe czy zadziała -1
+        # domyślnie dc tworzy kategorię na samym dole, może nie trzeba -1
+        tmp = 0
+        list_channels = dc.Guild.channels
+        channel_amount = len(list_channels)
+        while tmp <= list_channels: # nie jestem pewny czy <= czy <
+            # tmp = list index
+            await list_channels[tmp].edit(sync_permissions=True, position=channel_amount+1)
+            channel_amount+=1
+            tmp+=1
+        # dobra czyli wszystkie kanały przeniesione na sam dół w takiej kolejnośći jak były
+        # trzeba ew jakieś wyjątki zrobić jak na przykład przy kanale powitalnym, głosowych itd
+        # omatko trzeba jeszcze pododawać role, dodać rolę archiwum
+
+#         zmiana kanału do logów
+
+
 
 
 
