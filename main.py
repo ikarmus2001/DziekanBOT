@@ -12,6 +12,7 @@ token = getenv("TOKEN")
 #*#*#*#*#*#*#*#*#*#*#*#*#
 
 
+
 with open(config_relative_path) as f:
     cfg = json.load(f)
 with open(database_relative_path) as f:
@@ -30,6 +31,9 @@ class BOT(dc.Client):
         for guild in self.guilds:
             print(f"{self.user} connected to {guild.name}, id: {guild.id}")
         print(f"{self.user.name} is alive!")
+        newSemFlag = False
+
+    newSemFlag = False
 
     async def on_message(self, message):
         if message.author == self.user:
@@ -62,7 +66,6 @@ class BOT(dc.Client):
                     if self.logsActive: await self.log(message)
                 else:
                     await message.reply("Purge amount must be in range from `1` to `50`.")
-
 
         # user info embed getter
         elif command == "me" and await self.checkPerms(message, "me"):
@@ -184,15 +187,19 @@ class BOT(dc.Client):
         # new semester
         elif command == "newSemester" and await self.checkPerms(message, "newSemester"):
             await message.reply(f"Are you sure? `{self.prefix}Yes` or `{self.prefix}No`")
-            newSemFlag = True
+            # https://discordpy.readthedocs.io/en/latest/api.html#discord.Client.wait_for
+            # nie umiem tego napisać, wywala błąd z newSemFlag (odwołanie przed przypisaniem,
+            # nawet gdy używam jej jako globalnej, a chyba w dodawanie flagi do DB się nie bawimy)
+            await dc.Client.wait_for(self, message, check=lambda: command == 'Yes') # <-- to nie działa
 
-        elif command == "Yes" and await self.checkPerms(message, "newSemester"):
-            if newSemFlag == True:
-                newSemester(self, message)
+        elif command.capitalize() == "YES" or "Y" and await self.checkPerms(message, "newSemester"):
+            if newSemFlag == True: # <- to podobnie
+                await newSemester(self, message)
                 newSemFlag == False
                 print("New sem has begun")
-
-        elif command == "No":
+            else:
+                print("newSemFlag = ", newSemFlag)
+        elif command.capitalize() == "NO" or "N":
             newSemFlag = False
 
     # *=*=*=*=*=*=*=*=* COMMANDS *=*=*=*=*=*=*=*=* #
@@ -330,27 +337,30 @@ class BOT(dc.Client):
         embed.add_field(name="Command", value=f"`{message.content}`", inline=False)
         await self.logsChannel.send(embed=embed)
 
-    async def newSemester(self, message):
-        # https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.edit
-        # a no tentego i trzeba dodać więcej opcji (argumentó)
+    async def newSemester(self, message, role_template="- Gr "): #zmienna semesters - licznik newSemów
         # Trzeba najpierw przenosić kanały, dopiero usuwać kategorie
         # if czy jest już kanał o tej nazwie
-        newSemName = "OldSem"
-        await dc.Guild.create_category(name=newSemName, position=-1) # ciekawe czy zadziała -1
+        arch_category_name = f'sem-{db["semesters"]}-archive'
+        await dc.Guild.create_category(name=arch_category_name, position=-1) # ciekawe czy zadziała -1
         # domyślnie dc tworzy kategorię na samym dole, może nie trzeba -1
         tmp = 0
-        list_channels = dc.Guild.channels
+        all_channels = dc.Guild.channels
+        list_channels = [x for x in all_channels if x.endswith('global') or x.endswith('daty-linki') or x.startswith('matma')]
+        #to wyżej musisz koniecznie sprawdzić, pewnie tu dużo dziur zostawiłem albo można to uprościć
         channel_amount = len(list_channels)
+        roles = await dc.Guild.roles() # The first element of this list will be the lowest role in the hierarchy.
+        roles_deletable = [y for y in roles if y.startswith(role_template)]
         while tmp <= list_channels: # nie jestem pewny czy <= czy <
             # tmp = list index
-            await list_channels[tmp].edit(sync_permissions=True, position=channel_amount+1)
+            await list_channels[tmp].edit(sync_permissions=True, position=channel_amount+1, reason=arch_category_name)
             channel_amount+=1
             tmp+=1
         # dobra czyli wszystkie kanały przeniesione na sam dół w takiej kolejnośći jak były
-        # trzeba ew jakieś wyjątki zrobić jak na przykład przy kanale powitalnym, głosowych itd
         # omatko trzeba jeszcze pododawać role, dodać rolę archiwum
-
-#         zmiana kanału do logów
+        # zmiana kanału do logów
+        db["semesters"]+=1
+        with open(database_relative_path, mode="w") as f:
+            json.dump(db, f, indent=4) #cokolwiek indent=4 robi, wzięte z setPrefix
                         
 
 bot_client = BOT()

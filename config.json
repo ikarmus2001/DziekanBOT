@@ -1,11 +1,11 @@
 {
-    "prefix": "//", 
+    "prefix": "!",
     "perms": {
         "say": 0,
-        "me":  0,
+        "me": 0,
         "avatar": 0,
         "leaderboard": 0,
-        "permissions": 0, 
+        "permissions": 0,
         "id": 1,
         "purge": 1,
         "permissions_manage": 2,
