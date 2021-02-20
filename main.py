@@ -25,13 +25,13 @@ class BOT(dc.Client):
         self.prefix = cfg['prefix']
         self.perms = cfg['perms']
         self.debugging = db['debugMode']
+        self.newSemFlag = False
 
     async def on_ready(self):
         await self.loadLogsChannel()
         for guild in self.guilds:
             print(f"{self.user} connected to {guild.name}, id: {guild.id}")
         print(f"{self.user.name} is alive!")
-        newSemFlag = False
 
     newSemFlag = False
 
@@ -187,20 +187,22 @@ class BOT(dc.Client):
         # new semester
         elif command == "newSemester" and await self.checkPerms(message, "newSemester"):
             await message.reply(f"Are you sure? `{self.prefix}Yes` or `{self.prefix}No`")
+            self.newSemFlag = True
             # https://discordpy.readthedocs.io/en/latest/api.html#discord.Client.wait_for
             # nie umiem tego napisać, wywala błąd z newSemFlag (odwołanie przed przypisaniem,
             # nawet gdy używam jej jako globalnej, a chyba w dodawanie flagi do DB się nie bawimy)
-            await dc.Client.wait_for(self, message, check=lambda: command == 'Yes') # <-- to nie działa
+            # await dc.Client.wait_for(self, message, check=lambda: command == 'Yes') # <-- to nie działa
 
-        elif command.capitalize() == "YES" or "Y" and await self.checkPerms(message, "newSemester"):
-            if newSemFlag == True: # <- to podobnie
-                await newSemester(self, message)
-                newSemFlag == False
+        elif command.capitalize() == "YES" or command.capitalize() == "Y": # and await self.checkPerms(message, "newSemester")
+            print(self.newSemFlag)
+            if self.newSemFlag == True: # <- to podobnie
+                await self.newSemester(self, message=message)
+                self.newSemFlag == False
                 print("New sem has begun")
             else:
-                print("newSemFlag = ", newSemFlag)
-        elif command.capitalize() == "NO" or "N":
-            newSemFlag = False
+                print("newSemFlag = ", self.newSemFlag)
+        elif command.capitalize() == "NO" or command.capitalize() == "N":
+            self.newSemFlag = False
 
     # *=*=*=*=*=*=*=*=* COMMANDS *=*=*=*=*=*=*=*=* #
 
@@ -338,18 +340,22 @@ class BOT(dc.Client):
         await self.logsChannel.send(embed=embed)
 
     async def newSemester(self, message, role_template="- Gr "): #zmienna semesters - licznik newSemów
+        # później trzeba dodać liczenie kanałów, żeby ewentualnie usuwał niepotrzebne/najstarsze
         # Trzeba najpierw przenosić kanały, dopiero usuwać kategorie
         # if czy jest już kanał o tej nazwie
+        print("NEW SEM PRINT")
         arch_category_name = f'sem-{db["semesters"]}-archive'
         await dc.Guild.create_category(name=arch_category_name, position=-1) # ciekawe czy zadziała -1
         # domyślnie dc tworzy kategorię na samym dole, może nie trzeba -1
+        await dc.Guild.create_role(name=arch_category_name, add_reactions=False, read_messages=True,send_messages=False, manage_roles=False)
+        await dc.CategoryChannel.set_permissions()
         tmp = 0
         all_channels = dc.Guild.channels
         list_channels = [x for x in all_channels if x.endswith('global') or x.endswith('daty-linki') or x.startswith('matma')]
         #to wyżej musisz koniecznie sprawdzić, pewnie tu dużo dziur zostawiłem albo można to uprościć
         channel_amount = len(list_channels)
         roles = await dc.Guild.roles() # The first element of this list will be the lowest role in the hierarchy.
-        roles_deletable = [y for y in roles if y.startswith(role_template)]
+        roles_deletable = [y for y in roles if y.startswith(role_template) or y.startswith('MAT Gr.')]
         while tmp <= list_channels: # nie jestem pewny czy <= czy <
             # tmp = list index
             await list_channels[tmp].edit(sync_permissions=True, position=channel_amount+1, reason=arch_category_name)
