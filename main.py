@@ -1,15 +1,17 @@
-import discord as dc 
+import discord as dc
 from dotenv import load_dotenv
 from os import getenv
 import datetime as dt
-import json, string
+import json
+import string
+
 load_dotenv()
 
-#*#*#*# variables #*#*#*#
+# *#*#*# variables #*#*#*#
 config_relative_path = getenv("CONFIG")
 database_relative_path = getenv("DATABASE")
 token = getenv("TOKEN")
-#*#*#*#*#*#*#*#*#*#*#*#*#
+# *#*#*#*#*#*#*#*#*#*#*#*#
 
 
 with open(config_relative_path) as f:
@@ -60,12 +62,11 @@ class BOT(dc.Client):
             except:
                 await message.reply("Please specify how many messages to purge.")
             else:
-                if delRan in range(1,51):
-                    await message.channel.purge(limit=delRan+1, bulk=True)
+                if delRan in range(1, 51):
+                    await message.channel.purge(limit=delRan + 1, bulk=True)
                     if self.logsActive: await self.log(message)
                 else:
                     await message.reply("Purge amount must be in range from `1` to `50`.")
-
 
         # user info embed getter
         elif command == "me" and await self.checkPerms(message, "me"):
@@ -99,12 +100,12 @@ class BOT(dc.Client):
                     lvl = int(args[2])
                     if len(message.role_mentions) == 1:
                         role_id = message.raw_role_mentions[0]
-                    else: 
+                    else:
                         role_id = args[1]
                 except:
                     await message.reply(f"Please specify a permission level and role to assign the permission to.")
                 else:
-                    if lvl not in range(1,3):
+                    if lvl not in range(1, 3):
                         await message.reply("Perms level can only be 1 or 2")
                     else:
                         if self.managePerms("set", level=lvl, role=role_id):
@@ -117,7 +118,7 @@ class BOT(dc.Client):
                 if len(args) == 2:
                     if len(message.role_mentions) == 1:
                         role_id = message.raw_role_mentions[0]
-                    else: 
+                    else:
                         role_id = args[1]
                     if self.managePerms("delete", role=role_id):
                         if self.logsActive: await self.log(message)
@@ -126,7 +127,7 @@ class BOT(dc.Client):
                         await message.reply("Error occured while deleting role permissions.")
                 else:
                     await message.reply(f"Please specify a role to delete the permission from.")
-                    
+
             elif not any(args):
                 perm_lvl = self.getUserPerms(message.author)
                 await message.reply(f"Your permission level: `{perm_lvl if perm_lvl < 3 else 'GOD'}`")
@@ -159,7 +160,7 @@ class BOT(dc.Client):
                     self.saveDatabase()
                     if self.logsActive: await self.log(message)
                     await message.reply("Debugging mode has been successfully turned `on`")
-                
+
             elif args[0] == "off" or args[0] == "false" or args[0] == "0":
                 if not self.debugging:
                     await message.reply("Debugging mode is already `off`")
@@ -222,7 +223,7 @@ class BOT(dc.Client):
 
     async def loadLogsChannel(self):
         channel = await self.fetch_channel(db['logs']['id'])
-        if channel: 
+        if channel:
             self.logsChannel = channel
             self.logsActive = db['logs']['active']
         else:
@@ -246,7 +247,7 @@ class BOT(dc.Client):
 
     async def checkPerms(self, message, command):
         perm_lvl = self.getUserPerms(message.author)
-        if self.debugging and perm_lvl == -1: 
+        if self.debugging and perm_lvl == -1:
             await message.reply("Can't use commands while bot is in debugging mode.")
             return False
         try:
@@ -263,7 +264,7 @@ class BOT(dc.Client):
         base = "https://cdn.discordapp.com/avatars/"
         return base + str(user.id) + "/" + str(user.avatar)
 
-    def getMeEmbed(self, message, user = None):
+    def getMeEmbed(self, message, user=None):
         embed = dc.Embed(title="User info")
         if not user:
             user = message.author
@@ -292,16 +293,16 @@ class BOT(dc.Client):
             json.dump(cfg, f, indent=4)
         self.prefix = new_prefix
 
-    def getLeaderboard(self, guild, lenght = 5):
+    def getLeaderboard(self, guild, length=5):
         ranking = db["ranking"]
-        ranking.sort(key = lambda x: x["exp"], reverse = True)
+        ranking.sort(key=lambda x: x["exp"], reverse=True)
         lb = ""
-        r=1
-        for i in range(min(len(ranking), lenght, 15)):
+        r = 1
+        for i in range(min(len(ranking), length, 15)):
             user = ranking[i]
             if not guild.get_member(user['id']):
-                lb+=f"#{r} {guild.get_member(user['id'])}: {user.get('exp')}\n"
-                r+=1
+                lb += f"#{r} {guild.get_member(user['id'])}: {user.get('exp')}\n"
+                r += 1
         print(lb)
         return lb
 
@@ -335,10 +336,10 @@ class BOT(dc.Client):
                         return True
                 return False
 
-    async def log(self, message, custom = False): 
+    async def log(self, message, custom=False):
         if not custom:
             case = db['logs']['cases']
-            db['logs']['cases'] = case+1
+            db['logs']['cases'] = case + 1
             self.saveDatabase()
 
             embed = dc.Embed(title=f"Log Case #{case}")
@@ -364,13 +365,14 @@ class BOT(dc.Client):
             return False
         # initialize flags to see which roles exist and create the nonexistent ones later
         lab_flags = [0 for _ in range(group_count)]
-        mat_flags = [0 for _ in range((group_count-1)//2 + 1)]
+        mat_flags = [0 for _ in range((group_count - 1) // 2 + 1)]
 
-        records = {} # keep record of removed data to save and log it later
+        records = {}  # keep record of removed data to save and log it later
         for role in await channel.guild.fetch_roles():
-            if (role.name.startswith(role_template[0]) and role.name.endswith(role_template[1])) or (role.name.startswith(math_role_template[0]) and role.name.endswith(math_role_template[1])):
+            if (role.name.startswith(role_template[0]) and role.name.endswith(role_template[1])) or (
+                    role.name.startswith(math_role_template[0]) and role.name.endswith(math_role_template[1])):
                 role_type = "LAB" if role.name.startswith(role_template[0]) else "MAT"
-                records[str(role.name)] = [] 
+                records[str(role.name)] = []
                 members = role.members
                 # g_id determines the current group's number 
                 if role_type == "LAB":
@@ -385,37 +387,37 @@ class BOT(dc.Client):
                     await member.remove_roles(role)
 
                 # remove the role entirely if it's not in range of new semester's group length
-                if g_id not in range(1,group_count+1):
+                if g_id not in range(1, group_count + 1):
                     await channel.send(f"Removing `{role.name}`..")
                     await role.delete()
-                elif role_type == "MAT" and g_id not in range(1,len(mat_flags)+1):
+                elif role_type == "MAT" and g_id not in range(1, len(mat_flags) + 1):
                     await channel.send(f"Removing `{role.name}`..")
                     await role.delete()
                 else:
                     # set flags for roles kept for next semester and save their id's in db for future registration management
-                    if role_type == "LAB": 
-                        lab_flags[g_id-1] = 1
+                    if role_type == "LAB":
+                        lab_flags[g_id - 1] = 1
                         db["groupReg"]["role_ids"][str(g_id)] = role.id
-                    elif role_type == "MAT": 
-                        mat_flags[g_id-1] = 1
+                    elif role_type == "MAT":
+                        mat_flags[g_id - 1] = 1
                         db["groupReg"]["math_role_ids"][str(g_id)] = role.id
-            
+
         self.saveDatabase()
 
         # create nonexistent roles based on gaps in flags
         for ID, flag in enumerate(lab_flags):
             if not flag:
-                name = f"{role_template[0]}{ID+1}{role_template[1]}"
+                name = f"{role_template[0]}{ID + 1}{role_template[1]}"
                 await channel.send(f"Creating `{name}`..")
-                role = await channel.guild.create_role(name=name,mentionable=True,hoist=True,color=dc.Color.random())
-                db["groupReg"]["role_ids"][str(ID+1)] = role.id
+                role = await channel.guild.create_role(name=name, mentionable=True, hoist=True, color=dc.Color.random())
+                db["groupReg"]["role_ids"][str(ID + 1)] = role.id
         for ID, flag in enumerate(mat_flags):
             if not flag:
-                name = f"{math_role_template[0]}{ID+1}{math_role_template[1]}"
+                name = f"{math_role_template[0]}{ID + 1}{math_role_template[1]}"
                 await channel.send(f"Creating `{name}`..")
-                role = await channel.guild.create_role(name=name,mentionable=True,color=dc.Color.random())
-                db["groupReg"]["math_role_ids"][str(ID+1)] = role.id
-        
+                role = await channel.guild.create_role(name=name, mentionable=True, color=dc.Color.random())
+                db["groupReg"]["math_role_ids"][str(ID + 1)] = role.id
+
         self.saveDatabase()
 
         # save records to file and log them to logs channel if active
@@ -428,10 +430,10 @@ class BOT(dc.Client):
         await channel.send(f'`Archive saved on machine.`')
         return True
 
-    async def openGroupReg(self, message, group_count): 
+    async def openGroupReg(self, message, group_count):
         if await self.resetGroupRoles(message.channel, group_count):
             db["groupReg"]["active"] = True
-            db["groupReg"]["groupCount"] = group_count # group_count determines the len of lab groups in new semester
+            db["groupReg"]["groupCount"] = group_count  # group_count determines the len of lab groups in new semester
             # rid of registration category and text channels if they exist
             for category in message.guild.categories:
                 if category.name == cfg["nameSpace"]["groupsRegCategory"]:
@@ -442,12 +444,12 @@ class BOT(dc.Client):
             # create new category with its text channels for registration
             GRC = await message.guild.create_category(name=cfg["nameSpace"]["groupsRegCategory"], position=2)
             GRIC = await GRC.create_text_channel(name=cfg["nameSpace"]["groupsRegInfoChannel"])
-            await GRIC.set_permissions(message.guild.roles[0], send_messages = False, read_messages = True)
+            await GRIC.set_permissions(message.guild.roles[0], send_messages=False, read_messages=True)
             GRC = await GRC.create_text_channel(name=cfg["nameSpace"]["groupsRegChannel"])
             # save the channel id used for registration for command management purposes
             db["groupReg"]["channel_id"] = GRC.id
             self.saveDatabase()
-            
+
             # send registration opening notification to GRIC 
             await message.channel.send(f'`Group registration channel created.`')
             info = f''':warning: @everyone Rejestracja do grup w nowym semestrze została otwarta! :warning: \n
@@ -470,7 +472,7 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
     async def groupReg(self, message):
         user = message.author
         content = message.content.lower()
-        
+
         l_id = content.find('lab')
         m_id = content.find('mat')
         digits = string.digits
@@ -478,26 +480,31 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
 
         # do some string magic to extract lab group number from message if it inclues "lab" keyword
         if l_id >= 0:
-            if m_id > l_id: # dont include the "mat" keyword if it appears after "lab"
-                cntnt = content[l_id+3:m_id].lstrip()
-            else: cntnt = content[l_id+3:].lstrip()
-            lab_gr = int("".join([v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
+            if m_id > l_id:  # dont include the "mat" keyword if it appears after "lab"
+                cntnt = content[l_id + 3:m_id].lstrip()
+            else:
+                cntnt = content[l_id + 3:].lstrip()
+            lab_gr = int("".join(
+                [v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
             # return with an exception if the number is not in current lab groups range
-            if lab_gr not in range(1,db["groupReg"]["groupCount"]+1): 
+            if lab_gr not in range(1, db["groupReg"]["groupCount"] + 1):
                 await message.reply(f"Lab group needs to be between `1` and `{db['groupReg']['groupCount']}`.")
-                return 
-        # same string magic for mat group number
+                return
+                # same string magic for mat group number
         if m_id >= 0:
-            if l_id > m_id: # dont include the "lab" keyword if it appears after "mat"
-                cntnt = content[m_id+3:l_id].lstrip()
-            else: cntnt = content[m_id+3:].lstrip()
-            mat_gr = int("".join([v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
+            if l_id > m_id:  # dont include the "lab" keyword if it appears after "mat"
+                cntnt = content[m_id + 3:l_id].lstrip()
+            else:
+                cntnt = content[m_id + 3:].lstrip()
+            mat_gr = int("".join(
+                [v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
             # return with an exception if the number is not in current mat groups range
-            if mat_gr not in range(1,(db["groupReg"]["groupCount"]-1)//2 + 2): 
-                await message.reply(f"Mat group needs to be between `1` and `{(db['groupReg']['groupCount']-1)//2 + 1}`.")
-                return 
-        
-        # assign group roles to user and catch the output
+            if mat_gr not in range(1, (db["groupReg"]["groupCount"] - 1) // 2 + 2):
+                await message.reply(
+                    f"Mat group needs to be between `1` and `{(db['groupReg']['groupCount'] - 1) // 2 + 1}`.")
+                return
+
+                # assign group roles to user and catch the output
         out = await self.regToGroups(user, lab_gr, mat_gr)
         if out:
             await message.reply(f"Successfully registered to: `{'`, `'.join(out)}`")
@@ -512,7 +519,7 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
             elif matGroup and role.id in tuple(db["groupReg"]["math_role_ids"].values()):
                 await user.remove_roles(role)
 
-        output = [] # store successfully applied roles in output
+        output = []  # store successfully applied roles in output
         if labGroup:
             lab_id = db["groupReg"]["role_ids"][str(labGroup)]
             role = user.guild.get_role(lab_id)
@@ -524,7 +531,6 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
             output.append(role.name)
             await user.add_roles(role)
         return output
-
 
     async def closeGroupReg(self, message):
         # reset group registration database
@@ -543,7 +549,7 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
                 await category.delete()
                 break
 
-                        
+
 intents = dc.Intents.all()
 bot_client = BOT(intents=intents)
 bot_client.run(token)
