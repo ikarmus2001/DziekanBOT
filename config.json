@@ -1,0 +1,28 @@
+{
+    "prefix": "//", 
+    "perms": {
+        "say": 0,
+        "me":  0,
+        "avatar": 0,
+        "leaderboard": 0,
+        "permissions": 0, 
+        "id": 1,
+        "purge": 1,
+        "permissions_manage": 2,
+        "prefix": 2,
+        "logs": 3,
+        "debugging": 3,
+        "semester_manage": 3
+    },
+    "nameSpace": {
+        "labRoleTemplate": "- Gr # -",
+        "mathRoleTemplate": "- MAT Gr # -",
+        "groupsRegCategory": "rejestracje do grup",
+        "groupsRegInfoChannel": "rejestracje info",
+        "groupsRegChannel": "rejestracje komendy",
+        "generalChannelTemplate": "-general",
+        "datesChannelTemplate": "-daty-linki",
+        "mathChannelTemplate": "matma-grupa-",
+        "newSemesterDecorator": "`P O C Z A T E K    N O W E G O    S E M E S T R U`"
+    }
+}
