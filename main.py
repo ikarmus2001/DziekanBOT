@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 from os import getenv
 import datetime as dt
 import json, string
+from joachim.db import joachim_db
+from joachim.joachin_messages import JoachimMessages
+
 load_dotenv()
 
 #*#*#*# variables #*#*#*#
@@ -24,6 +27,9 @@ class BOT(dc.Client):
         self.prefix = cfg['prefix']
         self.perms = cfg['perms']
         self.debugging = db['debugMode']
+        # Joachim setup
+        self.db = joachim_db()
+        self.mess = JoachimMessages(self.db)
 
     async def on_ready(self):
         await self.loadLogsChannel()
@@ -35,8 +41,41 @@ class BOT(dc.Client):
         if message.author == self.user:
             return
         elif db["groupReg"]["active"] and message.channel.id == db["groupReg"]["channel_id"]:
-            if "lab" in message.content.lower() or "mat" in message.content.lower():
+            mess = message.content.lower()
+
+            if "lab" in mess or "mat" in mess:
                 await self.groupReg(message)
+
+            # Below joachim tracker
+
+            if message.startswith("!alert"):
+                if "overview" in mess:
+                    if "pdp" in mess:
+                        val = self.db.overview("pdp")
+                    if "rasberry" in mess:
+                        val = self.db.overview("ras")
+                    if "japonce" in mess:
+                        val = self.db.overview("jap")
+
+                    message.reply(val)
+
+                if "pdp" in mess:
+                    self.db.alert("pdp")
+                    message.reply(self.mess.pdp_message())
+
+                if "rasberry" in mess:
+                    self.db.alert("ras")
+                    message.reply(self.mess.rasberry_message())
+
+                if "japonce" in mess:
+                    self.db.alert("jap")
+                    message.reply(self.mess.jap_message())
+
+
+
+
+
+
         elif message.content.startswith(self.prefix):
             await self.command(message)
         elif (self.user.name + " ssie") in message.content or (self.user.name + " sucks") in message.content:
