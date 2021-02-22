@@ -12,7 +12,7 @@ class JoachimDb:
         now = datetime.now()
         last = self.conn.execute("SELECT date FROM joachim WHERE TYPE = ? ORDER BY date DESC LIMIT 1", (alert_type,)).fetchone()
 
-        if last - timedelta(seconds=15):
+        if last - timedelta(seconds=15) < 0:
             return
 
         self.conn.execute("INSERT INTO joachim VALUES (?,?)", (alert_type, now))
