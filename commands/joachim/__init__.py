@@ -1,11 +1,11 @@
-from .joachim_utils.db import JoachimDb
-from .joachim_utils.joachin_messages import JoachimMessages
+from commands.joachim.db import JoachimDb
+from commands.joachim.joachin_messages import JoachimMessages
 
 
 class Joachim:
-    def __init__(self):
-        self.db = JoachimDb()
-        self.mes = JoachimMessages()
+    def __init__(self, db_conn):
+        self.db = JoachimDb(db_conn)
+        self.mess = JoachimMessages(db_conn)
 
     async def overview(self, message_obj, args):
         if "pdp" in args:

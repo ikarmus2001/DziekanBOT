@@ -2,7 +2,7 @@ import datetime as dt
 import discord as dc
 
 
-def getAvatarURL(user):
+def get_avatar_url(user):
     base = "https://cdn.discordapp.com/avatars/"
     return base + str(user.id) + "/" + str(user.avatar)
 
@@ -14,7 +14,7 @@ async def get_me_embed(message, user=None):
         user = message.author
 
     embed.color = user.color
-    embed.set_image(url=getAvatarURL(user))
+    embed.set_image(url=get_avatar_url(user))
 
     joined_info = f"Joined server on `{user.joined_at.strftime('%d/%m/%Y')}`"
     joined_info += f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"

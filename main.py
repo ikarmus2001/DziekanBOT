@@ -1,18 +1,19 @@
 import datetime as dt
 import json
+import sqlite3
 import string
 from os import getenv
+import asyncio
 
 import discord as dc
 from dotenv import load_dotenv
 
-
-# Commands
-
 from commands.id import id
 from commands.me import me
-from commands.say import say
 from commands.purge import purge
+from commands.say import say
+
+# Commands
 
 load_dotenv()
 
@@ -35,12 +36,55 @@ class BOT(dc.Client):
         self.prefix = cfg["prefix"]
         self.perms = cfg["perms"]
         self.debugging = db["debugMode"]
+
+        self.db = sqlite3.connect("db.db")
+        self.db.execute("CREATE TABLE IF NOT EXISTS user_id_mapping (id varchar(50), displayed_username varchar(50))")
+
         self.commands_handlers = {
             "id": id,
             "me": me,
             "say": say,
             "purge": purge,
+            "panic": self.kolokwium_mode,
+            "help": self.help
         }
+
+    async def kolokwium_mode(self,message,args):
+        async with asyncio.Lock():
+            if "on" in args:
+                users = [*self.get_all_members()]
+                self.db.executemany("INSERT INTO user_id_mapping VALUES (?,?)",[(user.id,user.display_name) for user in users])
+                self.db.commit()
+
+                await message.reply("https://tenor.com/view/spongebob-patrick-panic-run-scream-gif-4656335")
+
+                for index, user in enumerate(users):
+                    try:
+                        await user.edit(nick=index)
+                    except:
+                        continue
+                
+            elif "off" in args:
+                for user_id, username in self.db.execute("SELECT * FROM user_id_mapping"):
+                    user = await message.guild.fetch_member(user_id)
+                    try:
+                        await user.edit(nick=username)
+                    except:
+                        continue
+                self.db.execute("DELETE FROM user_id_mapping")
+                self.db.commit()
+                print("DELETED")
+
+    async def help(self, message,_):
+        dc.embeds.Embed()
+        embed = dc.Embed(title="", url="https://github.com/ikarmus2001/DziekanBOT/",
+                         description="Dziekanbot jest open-sourcowym discordowym botem stworzonym do zarzadzania 'uczelnianym' serverem discorda",
+                         color=0xff0000)
+        embed.set_author(name="DziekanBOT - dostepne komendy", url="https://github.com/ikarmus2001/DziekanBOT/")
+
+        for name, command in self.commands_handlers.items():
+            embed.add_field(name=self.prefix + name, value=command.__doc__ if command.__doc__ is not None else "Brak dokumentacji", inline=False)
+        await message.reply(embed=embed)
 
     async def on_ready(self):
         for guild in self.guilds:
@@ -58,12 +102,12 @@ class BOT(dc.Client):
             print(command)
 
             if func := self.commands_handlers.get(command, False):
-                try:
+                # try:
                     await func(message, args)
-                except Exception as E:
-                    await message.reply("Cos sie wyjebalo" + E)
+                # except Exception as E:
+                    # await message.reply(f"Wystapil blad: {E}")
             else:
-                await message.reply(" ".join(self.commands_handlers))
+                await message.reply(f"Nie znaleziono komendy help - {self.prefix}help")
 
 
     def saveDatabase(self):
@@ -466,7 +510,6 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
                     await channel.delete()
                 await category.delete()
                 break
-
 
 intents = dc.Intents.all()
 bot_client = BOT(intents=intents)
