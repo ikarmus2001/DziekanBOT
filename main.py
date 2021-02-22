@@ -1,13 +1,18 @@
-import discord as dc
-from dotenv import load_dotenv
-from os import getenv
 import datetime as dt
 import json
 import string
-from joachim.db import joachim_db
-from joachim.joachin_messages import JoachimMessages
-from datetime import datetime
+from os import getenv
 
+import discord as dc
+from dotenv import load_dotenv
+
+
+# Commands
+
+from commands.id import id
+from commands.me import me
+from commands.say import say
+from commands.purge import purge
 
 load_dotenv()
 
@@ -30,9 +35,12 @@ class BOT(dc.Client):
         self.prefix = cfg["prefix"]
         self.perms = cfg["perms"]
         self.debugging = db["debugMode"]
-        # Joachim setup
-        self.db = joachim_db()
-        self.mess = JoachimMessages(self.db)
+        self.commands_handlers = {
+            "id": id,
+            "me": me,
+            "say": say,
+            "purge": purge,
+        }
 
     async def on_ready(self):
         for guild in self.guilds:
@@ -40,299 +48,23 @@ class BOT(dc.Client):
         print(f"{self.user.name} is alive!")
 
     async def on_message(self, message):
-
         if message.author == self.user:
             return
-        elif (
-            db["groupReg"]["active"]
-            and message.channel.id == db["groupReg"]["channel_id"]
-        ):
-            mess = message.content.lower()
 
-            if "lab" in mess or "mat" in mess:
-                await self.groupReg(message)
+        if message.content.startswith(self.prefix):
+            content = message.content[len(self.prefix):]
+            args = content.split()[1::] if len(content.split()) > 1 else [None]
+            command = content.split()[0]
+            print(command)
 
-        elif message.content.startswith(self.prefix):
-            await self.command(message)
-        elif (self.user.name + " ssie") in message.content or (
-            self.user.name + " sucks"
-        ) in message.content:
-            await message.reply("૮( ᵒ̌▱๋ᵒ̌ )ა ?!")
-
-    async def command(self, message):
-        content = message.content[len(self.prefix) :]
-        args = content.split()[1::] if len(content.split()) > 1 else [None]
-        command = content.split()[0]
-
-        # Joachim overview
-        if command.startswith("overview"):
-
-            if "pdp" in args:
-                val = self.db.overview("pdp")
-                mess_type = "pdp"
-            elif "rasberry" in args:
-                val = self.db.overview("ras")
-                mess_type = "ras"
-            elif "japonce" in args:
-                val = self.db.overview("jap")
-                mess_type = "jap"
-
-            await message.reply(self.mess.overview_message(mess_type, val))
-
-        # Jochaim alerts
-        # To do 
-        # sprawdzic czy aktualnie odbywaja sie zajecia
-        # zrobic ładny wykres ?
-        # dodac system losowania wiadomosci podczas alertow
-        if command.startswith("alert"):
-            if "pdp" in args:
-                self.db.alert("pdp")
-                await message.reply(self.mess.pdp_message())
-
-            elif "rasberry" in args:
-                self.db.alert("ras")
-                await message.reply(self.mess.rasberry_message())
-
-            elif "japonce" in args:
-                self.db.alert("jap")
-                await message.reply(self.mess.jap_message())
-
-        # say command
-        if command == "say" and await self.checkPerms(message, "say"):
-            await message.delete()
-            if any(args):
-                await message.channel.send(" ".join([arg for arg in args]))
-
-        # message purge
-        elif command == "purge" and await self.checkPerms(message, "purge"):
-            try:
-                delRan = int(args[0])
-            except:
-                await message.reply("Please specify how many messages to purge.")
-            else:
-                if delRan in range(1, 51):
-                    await message.channel.purge(limit=delRan + 1, bulk=True)
-                    if self.logsActive:
-                        await self.log(message)
-                else:
-                    await message.reply(
-                        "Purge amount must be in range from `1` to `50`."
-                    )
-
-
-        # user info embed getter
-        elif command == "me" and await self.checkPerms(message, "me"):
-            if len(message.mentions) == 1:
-                await message.channel.send(
-                    embed=self.getMeEmbed(message, message.mentions[0])
-                )
-            else:
-                await message.channel.send(embed=self.getMeEmbed(message))
-
-        # role/channel ID getter
-        elif command == "id" and await self.checkPerms(message, "id"):
-            if len(args) == 1:
-                if len(message.role_mentions) == 1:
-                    await message.channel.send(f"id: `{message.role_mentions[0].id}`")
-                elif len(message.channel_mentions) == 1:
-                    await message.channel.send(
-                        f"id: `{message.channel_mentions[0].id}`"
-                    )
-                elif len(message.mentions) == 1:
-                    await message.channel.send(f"id: `{message.mentions[0].id}`")
-
-        # avatar getter
-        elif (
-            command == "avatar"
-            or command == "av"
-            and await self.checkPerms(message, "avatar")
-        ):
-            if message.mentions:
-                avatar_url = self.getAvatarURL(message.mentions[0])
-            else:
-                avatar_url = self.getAvatarURL(message.author)
-            await message.reply(avatar_url)
-
-        # perms getter/setter
-        elif (
-            command == "perms"
-            or command == "permissions"
-            and await self.checkPerms(message, "permissions")
-        ):
-            if (
-                args[0] == "set"
-                and len(args) == 3
-                and await self.checkPerms(message, "permissions_manage")
-            ):
+            if func := self.commands_handlers.get(command, False):
                 try:
-                    lvl = int(args[2])
-                    if len(message.role_mentions) == 1:
-                        role_id = message.raw_role_mentions[0]
-                    else:
-                        role_id = args[1]
-                except:
-                    await message.reply(
-                        f"Please specify a permission level and role to assign the permission to."
-                    )
-                else:
-                    if lvl not in range(1, 3):
-                        await message.reply("Perms level can only be 1 or 2")
-                    else:
-                        if self.managePerms("set", level=lvl, role=role_id):
-                            await message.reply("Role permission changed successfully")
-                            if self.logsActive:
-                                await self.log(message)
-                        else:
-                            await message.reply(
-                                "Error occured while changing role permissions."
-                            )
+                    await func(message, args)
+                except Exception as E:
+                    await message.reply("Cos sie wyjebalo" + E)
+            else:
+                await message.reply(" ".join(self.commands_handlers))
 
-            elif (args[0] == "delete" or args[0] == "del") and await self.checkPerms(
-                message, "permissions_manage"
-            ):
-                if len(args) == 2:
-                    if len(message.role_mentions) == 1:
-                        role_id = message.raw_role_mentions[0]
-                    else:
-                        role_id = args[1]
-                    if self.managePerms("delete", role=role_id):
-                        if self.logsActive:
-                            await self.log(message)
-                        await message.reply("Role permission deleted successfully")
-                    else:
-                        await message.reply(
-                            "Error occured while deleting role permissions."
-                        )
-                else:
-                    await message.reply(
-                        f"Please specify a role to delete the permission from."
-                    )
-
-
-            elif not any(args):
-                perm_lvl = self.getUserPerms(message.author)
-                await message.reply(
-                    f"Your permission level: `{perm_lvl if perm_lvl < 3 else 'GOD'}`"
-                )
-
-        # bot prefix setter
-        elif command == "prefix" and await self.checkPerms(message, "prefix"):
-            if args[0]:
-                self.setPrefix(args[0])
-                await message.channel.send(f"Prefix successfully set to: `{args[0]}`")
-                if self.logsActive:
-                    await self.log(message)
-
-        # leaderboard getter
-        elif command == "leaderboard" and await self.checkPerms(message, "leaderboard"):
-            lb_len = 5
-            if args[0]:
-                try:
-                    lb_len = int(args[0])
-                except:
-                    await message.reply(
-                        f"Please specify the leaderboard lenght like: `{self.prefix}leaderboard 10`"
-                    )
-            lb = self.getLeaderboard(message.guild, lb_len)
-            await message.channel.send(lb)
-
-        # debug mode
-        elif (command == "debug" or command == "debugging") and await self.checkPerms(
-            message, "debugging"
-        ):
-            if args[0] == "on" or args[0] == "true" or args[0] == "1":
-                if self.debugging:
-                    await message.reply("Debugging mode is already `on`")
-                else:
-                    self.debugging = db["debugMode"] = True
-                    self.saveDatabase()
-                    if self.logsActive:
-                        await self.log(message)
-                    await message.reply(
-                        "Debugging mode has been successfully turned `on`"
-                    )
-
-
-            elif args[0] == "off" or args[0] == "false" or args[0] == "0":
-                if not self.debugging:
-                    await message.reply("Debugging mode is already `off`")
-                else:
-                    self.debugging = db["debugMode"] = False
-                    self.saveDatabase()
-                    if self.logsActive:
-                        await self.log(message)
-                    await message.reply(
-                        "Debugging mode has been successfully turned `off`"
-                    )
-
-        # logs management
-        elif command == "logs" and await self.checkPerms(message, "logs"):
-            if args[0] == "set":
-                if len(args) == 2 and len(message.channel_mentions) == 1:
-                    await self.setLogsChannel(message.channel_mentions[0].id)
-                    await message.reply(
-                        f"Logs channel successfully set to {message.channel_mentions[0].mention}"
-                    )
-                else:
-                    await message.reply(
-                        f"Please specify a log channel like: `{self.prefix}logs set #someLogsChannel`"
-                    )
-            elif len(args) == 1 and (
-                args[0] == "on" or args[0] == "true" or args[0] == "1"
-            ):
-                self.logsActive = True
-                db["logs"]["active"] = True
-                self.saveDatabase()
-                if self.logsActive:
-                    await self.log(message)
-                await message.reply("Logs are now turned `on`")
-            elif len(args) == 1 and (
-                args[0] == "off" or args[0] == "false" or args[0] == "0"
-            ):
-                if self.logsActive:
-                    await self.log(message)
-                self.logsActive = False
-                db["logs"]["active"] = False
-                self.saveDatabase()
-                await message.reply("Logs are now turned `off`")
-
-        # semester management
-        elif (command == "semester" or command == "sem") and await self.checkPerms(
-            message, "semester_manage"
-        ):
-            if args[0] == "new" or args[0] == "start":
-                if not db["groupReg"]["active"]:
-                    try:
-                        group_count = int(args[1])
-                    except:
-                        await message.reply(
-                            f"Please specify the number of groups like: `{self.prefix}semester new 8`"
-                        )
-                    else:
-                        if await self.openGroupReg(message, group_count):
-                            await message.reply("New semester started successfully!")
-                            if self.logsActive:
-                                await self.log(message)
-                        else:
-                            await message.reply(
-                                "An error has occured while creating new semester."
-                            )
-                else:
-                    await message.reply("Group registration is already open!")
-            elif args[0] == "close" or args[0] == "end":
-                if db["groupReg"]["active"]:
-                    await self.closeGroupReg(message)
-                    if self.logsActive:
-                        await self.log(message)
-                    await message.reply(
-                        "Group registration has successfully been closed."
-                    )
-                else:
-                    await message.reply(
-                        "There's no group registration currently ongoing to close!"
-                    )
-
-    # *=*=*=*=*=*=*=*=* COMMANDS *=*=*=*=*=*=*=*=* #
 
     def saveDatabase(self):
         with open(database_relative_path, mode="w") as f:
@@ -379,39 +111,11 @@ class BOT(dc.Client):
             await message.reply("You don't have the permission to use this command.")
             return False
 
-    def getAvatarURL(self, user):
-        base = "https://cdn.discordapp.com/avatars/"
-        return base + str(user.id) + "/" + str(user.avatar)
-
-    def getMeEmbed(self, message, user=None):
-        embed = dc.Embed(title="User info")
-        if not user:
-            user = message.author
-        embed.color = user.color
-        embed.set_image(url=self.getAvatarURL(user))
-
-        joined_info = f"Joined server on `{user.joined_at.strftime('%d/%m/%Y')}`"
-        joined_info += f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
-
-        user_roles = [role.mention for role in user.roles if role.name != "@everyone"]
-        if not any(user_roles):
-            roles_info = "No roles to see here!"
-        else:
-            roles_info = ", ".join(user_roles)
-
-        # ranking_info =
-
-        embed.add_field(name="Join Date", value=joined_info, inline=False)
-        embed.add_field(name="User Roles", value=roles_info, inline=False)
-        # embed.add_field(name="Ranking", value=ranking_info, inline=False)
-        return embed
-
     def setPrefix(self, new_prefix):
         cfg["prefix"] = new_prefix
         with open(config_relative_path, mode="w") as f:
             json.dump(cfg, f, indent=4)
         self.prefix = new_prefix
-
 
     def getLeaderboard(self, guild, length=5):
 
@@ -423,7 +127,6 @@ class BOT(dc.Client):
         for i in range(min(len(ranking), length, 15)):
             user = ranking[i]
             if not guild.get_member(user['id']):
-
                 lb += f"#{r} {guild.get_member(user['id'])}: {user.get('exp')}\n"
                 r += 1
         print(lb)
@@ -502,11 +205,11 @@ class BOT(dc.Client):
         records = {}  # keep record of removed data to save and log it later
         for role in await channel.guild.fetch_roles():
             if (
-                role.name.startswith(role_template[0])
-                and role.name.endswith(role_template[1])
+                    role.name.startswith(role_template[0])
+                    and role.name.endswith(role_template[1])
             ) or (
-                role.name.startswith(math_role_template[0])
-                and role.name.endswith(math_role_template[1])
+                    role.name.startswith(math_role_template[0])
+                    and role.name.endswith(math_role_template[1])
             ):
 
                 role_type = "LAB" if role.name.startswith(role_template[0]) else "MAT"
@@ -515,12 +218,12 @@ class BOT(dc.Client):
                 # g_id determines the current group's number
                 if role_type == "LAB":
                     g_id = int(
-                        role.name[len(role_template[0]) : -len(role_template[1])]
+                        role.name[len(role_template[0]): -len(role_template[1])]
                     )
                 elif role_type == "MAT":
                     g_id = int(
                         role.name[
-                            len(math_role_template[0]) : -len(math_role_template[1])
+                        len(math_role_template[0]): -len(math_role_template[1])
                         ]
                     )
 
@@ -638,7 +341,6 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
         user = message.author
         content = message.content.lower()
 
-
         l_id = content.find('lab')
         m_id = content.find('mat')
 
@@ -649,16 +351,16 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
         if l_id >= 0:
             if m_id > l_id:  # dont include the "mat" keyword if it appears after "lab"
 
-                cntnt = content[l_id + 3 : m_id].lstrip()
+                cntnt = content[l_id + 3: m_id].lstrip()
             else:
-                cntnt = content[l_id + 3 :].lstrip()
+                cntnt = content[l_id + 3:].lstrip()
             lab_gr = int(
                 "".join(
                     [
                         v
                         for vID, v in enumerate(cntnt)
                         if v in digits
-                        and not any([c not in digits for c in cntnt[:vID]])
+                           and not any([c not in digits for c in cntnt[:vID]])
                     ]
                 )
             )
@@ -671,50 +373,50 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
         # same string magic for mat group number
         if m_id >= 0:
             if l_id > m_id:  # dont include the "lab" keyword if it appears after "mat"
-                cntnt = content[m_id + 3 : l_id].lstrip()
+                cntnt = content[m_id + 3: l_id].lstrip()
             else:
-                cntnt = content[m_id + 3 :].lstrip()
+                cntnt = content[m_id + 3:].lstrip()
             mat_gr = int(
                 "".join(
                     [
                         v
                         for vID, v in enumerate(cntnt)
                         if v in digits
-                        and not any([c not in digits for c in cntnt[:vID]])
+                           and not any([c not in digits for c in cntnt[:vID]])
                     ]
                 )
             )
             # return with an exception if the number is not in current mat groups range
             if mat_gr not in range(1, (db["groupReg"]["groupCount"] - 1) // 2 + 2):
                 await message.reply(
-                    f"Mat group needs to be between `1` and `{(db['groupReg']['groupCount']-1)//2 + 1}`."
+                    f"Mat group needs to be between `1` and `{(db['groupReg']['groupCount'] - 1) // 2 + 1}`."
                 )
                 return
 
         # assign group roles to user and catch the output
-# idk tu mi krzyczy błąd
-#                 cntnt = content[l_id + 3:m_id].lstrip()
-#             else:
-#                 cntnt = content[l_id + 3:].lstrip()
-#             lab_gr = int("".join(
-#                 [v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
-#             # return with an exception if the number is not in current lab groups range
-#             if lab_gr not in range(1, db["groupReg"]["groupCount"] + 1):
-#                 await message.reply(f"Lab group needs to be between `1` and `{db['groupReg']['groupCount']}`.")
-#                 return
-#                 # same string magic for mat group number
-#         if m_id >= 0:
-#             if l_id > m_id:  # dont include the "lab" keyword if it appears after "mat"
-#                 cntnt = content[m_id + 3:l_id].lstrip()
-#             else:
-#                 cntnt = content[m_id + 3:].lstrip()
-#             mat_gr = int("".join(
-#                 [v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
-#             # return with an exception if the number is not in current mat groups range
-#             if mat_gr not in range(1, (db["groupReg"]["groupCount"] - 1) // 2 + 2):
-#                 await message.reply(
-#                     f"Mat group needs to be between `1` and `{(db['groupReg']['groupCount'] - 1) // 2 + 1}`.")
-#                 return
+        # idk tu mi krzyczy błąd
+        #                 cntnt = content[l_id + 3:m_id].lstrip()
+        #             else:
+        #                 cntnt = content[l_id + 3:].lstrip()
+        #             lab_gr = int("".join(
+        #                 [v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
+        #             # return with an exception if the number is not in current lab groups range
+        #             if lab_gr not in range(1, db["groupReg"]["groupCount"] + 1):
+        #                 await message.reply(f"Lab group needs to be between `1` and `{db['groupReg']['groupCount']}`.")
+        #                 return
+        #                 # same string magic for mat group number
+        #         if m_id >= 0:
+        #             if l_id > m_id:  # dont include the "lab" keyword if it appears after "mat"
+        #                 cntnt = content[m_id + 3:l_id].lstrip()
+        #             else:
+        #                 cntnt = content[m_id + 3:].lstrip()
+        #             mat_gr = int("".join(
+        #                 [v for vID, v in enumerate(cntnt) if v in digits and not any([c not in digits for c in cntnt[:vID]])]))
+        #             # return with an exception if the number is not in current mat groups range
+        #             if mat_gr not in range(1, (db["groupReg"]["groupCount"] - 1) // 2 + 2):
+        #                 await message.reply(
+        #                     f"Mat group needs to be between `1` and `{(db['groupReg']['groupCount'] - 1) // 2 + 1}`.")
+        #                 return
 
         out = await self.regToGroups(user, lab_gr, mat_gr)
         if out:
@@ -731,7 +433,7 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
             if labGroup and role.id in tuple(db["groupReg"]["role_ids"].values()):
                 await user.remove_roles(role)
             elif matGroup and role.id in tuple(
-                db["groupReg"]["math_role_ids"].values()
+                    db["groupReg"]["math_role_ids"].values()
             ):
                 await user.remove_roles(role)
 
