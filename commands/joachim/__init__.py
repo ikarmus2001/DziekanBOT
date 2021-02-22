@@ -3,9 +3,9 @@ from commands.joachim.joachin_messages import JoachimMessages
 
 
 class Joachim:
-    def __init__(self, db_conn):
+    def __init__(self, db_conn,messages):
         self.db = JoachimDb(db_conn)
-        self.mess = JoachimMessages(db_conn)
+        self.mess = JoachimMessages(db_conn,messages)
 
     async def overview(self, message_obj, args):
         if "pdp" in args:

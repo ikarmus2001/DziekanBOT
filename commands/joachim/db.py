@@ -10,8 +10,13 @@ class JoachimDb:
 
     def alert(self, alert_type):
         now = datetime.now()
-        self.conn.execute("SELECT DATE < ? FROM joachim WHERE TYPE = ? LIMIT 1 ORDER BY date DESC").fetchone()[0]
-        self.conn.execute("INSERT INTO joachim VALUES (?,?)", (alert_type, now()))
+        last = self.conn.execute("SELECT date FROM joachim WHERE TYPE = ? ORDER BY date DESC LIMIT 1", (alert_type,)).fetchone()
+
+        if last - timedelta(seconds=15):
+            return
+
+        self.conn.execute("INSERT INTO joachim VALUES (?,?)", (alert_type, now))
+        self.conn.commit()
 
     def overview(self, type):
         now = datetime.now()

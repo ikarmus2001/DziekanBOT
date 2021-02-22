@@ -4,9 +4,8 @@ from pathlib import Path
 
 
 class JoachimMessages:
-    def __init__(self, db):
-        with open(str(Path(__file__).parent) + "/overview.json") as f:
-            self.overview = json.load(f)
+    def __init__(self, db,overview):
+        self.overview = overview
         self.db = db
 
     def pdp_message(self):

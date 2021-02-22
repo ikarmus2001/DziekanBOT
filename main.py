@@ -8,11 +8,13 @@ import asyncio
 import discord as dc
 from dotenv import load_dotenv
 
+from config import Config
+
 from commands.id import id
 from commands.me import me
 from commands.purge import purge
 from commands.say import say
-
+from commands.joachim import Joachim
 # Commands
 
 load_dotenv()
@@ -37,8 +39,12 @@ class BOT(dc.Client):
         self.perms = cfg["perms"]
         self.debugging = db["debugMode"]
 
-        self.db = sqlite3.connect("db.db")
+        self.config = Config()
+
+        self.db = sqlite3.connect("db.db",detect_types=sqlite3.PARSE_DECLTYPES)
         self.db.execute("CREATE TABLE IF NOT EXISTS user_id_mapping (id varchar(50), displayed_username varchar(50))")
+
+        self.joachim = Joachim(self.db,self.config.overview)
 
         self.commands_handlers = {
             "id": id,
@@ -46,7 +52,9 @@ class BOT(dc.Client):
             "say": say,
             "purge": purge,
             "panic": self.kolokwium_mode,
-            "help": self.help
+            "help": self.help,
+            "overview": self.joachim.overview,
+            "alert": self.joachim.alert
         }
 
     async def kolokwium_mode(self,message,args):
