@@ -7,8 +7,4 @@ async def purge(message, args):
         if del_range in range(1, 51):
             await message.channel.purge(limit=del_range + 1, bulk=True)
         else:
-            await message.reply(
-                "Purge amount must be in range from `1` to `50`."
-            )
-
-
+            await message.reply("Purge amount must be in range from `1` to `50`.")

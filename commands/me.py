@@ -4,7 +4,7 @@ import discord as dc
 
 def get_avatar_url(user):
     base = "https://cdn.discordapp.com/avatars/"
-    return base + str(user.id) + "/" + str(user.avatar)
+    return base + str(user.user_id) + "/" + str(user.avatar)
 
 
 async def get_me_embed(message, user=None):
@@ -17,10 +17,12 @@ async def get_me_embed(message, user=None):
     embed.set_image(url=get_avatar_url(user))
 
     joined_info = f"Joined server on `{user.joined_at.strftime('%d/%m/%Y')}`"
-    joined_info += f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
+    joined_info += (
+        f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
+    )
 
     user_roles = [role.name for role in user.roles if role.name != "@everyone"]
-    
+
     if not user_roles:
         roles_info = "No roles to see here!"
     else:
@@ -32,9 +34,8 @@ async def get_me_embed(message, user=None):
     await message.channel.send(embed=embed)
 
 
-async def me(message, args):
+async def me(message, _):
     if len(message.mentions) == 1:
         await get_me_embed(message, message.mentions[0])
     else:
         await get_me_embed(message)
-

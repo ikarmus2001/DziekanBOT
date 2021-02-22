@@ -1,24 +1,55 @@
 from pathlib import Path
+from random import choice
 import json
+
 
 class Config:
     def __init__(self):
-        with open(str(Path(__file__).parent) + "/secret.json") as f:
-            self.overview = json.load(f)
+        self.config_path = str(Path(__file__).parent) + "/new_config.json"
 
-    _start_panic_gifs = [
-        "https://media.tenor.co/videos/64b8b60e40e40b674d96ebd625839e52/mp4",
-        "https://media.tenor.co/videos/969d12eb6bf45cedc0e5be292aad9cdf/mp4",
-        "https://media.tenor.co/videos/03b16236f66bb9c4627db19f76726bb2/mp4",
-        "https://tenor.com/view/panic-time-to-panic-is-my-house-okay-simpsons-breaking-news-gif-12267791"
-    ]
+        with open(self.config_path) as f:
+            self.data = json.load(f)
 
-    _end_panic_gifs = [
-        "https://tenor.com/view/chi-gif-4373114",
-        "https://tenor.com/view/fine-this-is-fine-gif-11131666",
-        "https://tenor.com/view/calm-down-gif-5362498",
-        "https://tenor.com/view/victory-blunt-smoke-cigarette-celebrate-bryce-gif-14525627",
-        "https://tenor.com/view/daddy-chill-calm-down-wait-gif-14383390"
-    ]
+    async def has_permision(self, command_to_execute, message):
+        return True
 
+    def config_save(self):
+        with open(self.config_path, mode="w") as f:
+            json.dump(self.data, f, indent=4)
 
+    def pdp_message(self):
+        return choice(self.data["joachim"]["alert"]["pdp"])
+
+    def jap_message(self):
+        return choice(self.data["joachim"]["alert"]["japan"])
+
+    def raspberry_message(self):
+        return choice(self.data["joachim"]["alert"]["raspberry"])
+
+    @property
+    def joachim_timeout(self):
+        return self.data["joachim"]["timeout"]
+
+    @property
+    def joachim_timestamps(self):
+        return self.data["joachim"]["timestamps"]
+
+    @property
+    def token(self):
+        return self.data["token"]
+
+    @property
+    def prefix(self):
+        return self.data["prefix"]
+
+    @property
+    def overview(self):
+        return self.data["joachim"]["overview"]
+
+    @property
+    def start_panic_gif(self):
+        return choice(self.data["panic"]["start_panic_gifs"])
+
+    @property
+    def end_panic_gif(self):
+        return choice(self.data["panic"]["end_panic_gifs"])
