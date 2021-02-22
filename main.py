@@ -49,11 +49,12 @@ class BOT(dc.Client):
             "help": self.help
         }
 
-    async def kolokwium_mode(self,message,args):
+    async def kolokwium_mode(self, message, args):
         async with asyncio.Lock():
             if "on" in args:
                 users = [*self.get_all_members()]
-                self.db.executemany("INSERT INTO user_id_mapping VALUES (?,?)",[(user.id,user.display_name) for user in users])
+                self.db.executemany("INSERT INTO user_id_mapping VALUES (?,?)",
+                                    [(user.id, user.display_name) for user in users])
                 self.db.commit()
 
                 await message.reply("https://tenor.com/view/spongebob-patrick-panic-run-scream-gif-4656335")
@@ -63,7 +64,7 @@ class BOT(dc.Client):
                         await user.edit(nick=index)
                     except:
                         continue
-                
+
             elif "off" in args:
                 for user_id, username in self.db.execute("SELECT * FROM user_id_mapping"):
                     user = await message.guild.fetch_member(user_id)
@@ -75,15 +76,17 @@ class BOT(dc.Client):
                 self.db.commit()
                 print("DELETED")
 
-    async def help(self, message,_):
+    async def help(self, message, _):
         dc.embeds.Embed()
         embed = dc.Embed(title="", url="https://github.com/ikarmus2001/DziekanBOT/",
-                         description="Dziekanbot jest open-sourcowym discordowym botem stworzonym do zarzadzania 'uczelnianym' serverem discorda",
+                         description="Dziekanbot jest open-sourcowym discordowym botem stworzonym do zarzadzania "
+                                     "'uczelnianym' serverem discorda",
                          color=0xff0000)
         embed.set_author(name="DziekanBOT - dostepne komendy", url="https://github.com/ikarmus2001/DziekanBOT/")
 
         for name, command in self.commands_handlers.items():
-            embed.add_field(name=self.prefix + name, value=command.__doc__ if command.__doc__ is not None else "Brak dokumentacji", inline=False)
+            embed.add_field(name=self.prefix + name,
+                            value=command.__doc__ if command.__doc__ is not None else "Brak dokumentacji", inline=False)
         await message.reply(embed=embed)
 
     async def on_ready(self):
@@ -103,16 +106,15 @@ class BOT(dc.Client):
 
             if func := self.commands_handlers.get(command, False):
                 # try:
-                    await func(message, args)
-                # except Exception as E:
-                    # await message.reply(f"Wystapil blad: {E}")
+                await func(message, args)
+            # except Exception as E:
+            # await message.reply(f"Wystapil blad: {E}")
             else:
                 await message.reply(f"Nie znaleziono komendy help - {self.prefix}help")
 
-
     def saveDatabase(self):
-        with open(database_relative_path, mode="w") as f:
-            json.dump(db, f, indent=4)
+        with open(database_relative_path, mode="w") as save_db_var:
+            json.dump(db, save_db_var, indent=4)
 
     async def loadLogsChannel(self):
         channel = await self.fetch_channel(db['logs']['id'])
@@ -157,8 +159,8 @@ class BOT(dc.Client):
 
     def setPrefix(self, new_prefix):
         cfg["prefix"] = new_prefix
-        with open(config_relative_path, mode="w") as f:
-            json.dump(cfg, f, indent=4)
+        with open(config_relative_path, mode="w") as set_prefix_var:
+            json.dump(cfg, set_prefix_var, indent=4)
         self.prefix = new_prefix
 
     def getLeaderboard(self, guild, length=5):
@@ -218,7 +220,7 @@ class BOT(dc.Client):
             self.saveDatabase()
 
             embed = dc.Embed(title=f"Log Case #{case}")
-            embed.color = message.author.color
+            embed.colour = message.author.colour
 
             embed.add_field(name="Author", value=message.author.mention, inline=True)
             embed.add_field(name="Channel", value=message.channel.mention, inline=True)
@@ -265,11 +267,7 @@ class BOT(dc.Client):
                         role.name[len(role_template[0]): -len(role_template[1])]
                     )
                 elif role_type == "MAT":
-                    g_id = int(
-                        role.name[
-                        len(math_role_template[0]): -len(math_role_template[1])
-                        ]
-                    )
+                    g_id = int(role.name[len(math_role_template[0]): -len(math_role_template[1])])
 
                 # clear role from every user and store the changes in records
                 await channel.send(
@@ -322,8 +320,8 @@ class BOT(dc.Client):
         self.saveDatabase()
 
         # save records to file and log them to logs channel if active
-        with open("archives.txt", "a") as f:
-            json.dump(records, f, indent=4)
+        with open("archives.txt", "a") as archives_var:
+            json.dump(records, archives_var, indent=4)
         # if self.logsActive:
         #     await self.log(f'```json\n{json.dumps(records,indent=4)}\n```', custom=True)
         #     await channel.send(f'`Archive sent to logs channel and saved on machine.`')
@@ -470,25 +468,25 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
                 "An error occured while registering to group, please try again."
             )
 
-    async def regToGroups(self, user, labGroup=None, matGroup=None):
-        if not (labGroup or matGroup):
+    async def regToGroups(self, user, lab_group=None, mat_group=None):
+        if not (lab_group or mat_group):
             return False
         for role in user.roles:
-            if labGroup and role.id in tuple(db["groupReg"]["role_ids"].values()):
+            if lab_group and role.id in tuple(db["groupReg"]["role_ids"].values()):
                 await user.remove_roles(role)
-            elif matGroup and role.id in tuple(
+            elif mat_group and role.id in tuple(
                     db["groupReg"]["math_role_ids"].values()
             ):
                 await user.remove_roles(role)
 
         output = []  # store successfully applied roles in output
-        if labGroup:
-            lab_id = db["groupReg"]["role_ids"][str(labGroup)]
+        if lab_group:
+            lab_id = db["groupReg"]["role_ids"][str(lab_group)]
             role = user.guild.get_role(lab_id)
             output.append(role.name)
             await user.add_roles(role)
-        if matGroup:
-            mat_id = db["groupReg"]["math_role_ids"][str(matGroup)]
+        if mat_group:
+            mat_id = db["groupReg"]["math_role_ids"][str(mat_group)]
             role = user.guild.get_role(mat_id)
             output.append(role.name)
             await user.add_roles(role)
@@ -510,6 +508,7 @@ Dla osób będących w kilku grupach laboratoryjnych jednocześnie - proszę kon
                     await channel.delete()
                 await category.delete()
                 break
+
 
 intents = dc.Intents.all()
 bot_client = BOT(intents=intents)
