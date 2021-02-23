@@ -4,7 +4,7 @@ import discord as dc
 
 def get_avatar_url(user):
     base = "https://cdn.discordapp.com/avatars/"
-    return base + str(user.user_id) + "/" + str(user.avatar)
+    return base + str(user.id) + "/" + str(user.avatar)
 
 
 async def get_me_embed(message, user=None):
