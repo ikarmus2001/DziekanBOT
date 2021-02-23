@@ -10,8 +10,17 @@ class Config:
         with open(self.config_path) as f:
             self.data = json.load(f)
 
-    async def has_permision(self, command_to_execute, message):
-        return True
+    def has_permission(self, command_to_execute, message):
+        command_power = self.data["perms"][command_to_execute]
+        if command_power == 0:
+            return True
+
+        user_roles = message.author.roles
+
+        for crt_power in range(command_power, 4):
+            if any(user_role.id in self.data["perms_roles"][str(crt_power)] for user_role in user_roles):
+                return True
+        return False
 
     def config_save(self):
         with open(self.config_path, mode="w") as f:

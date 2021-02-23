@@ -17,7 +17,9 @@ class Joachim:
         elif "japonce" in args:
             val = self.db.overview("jap")
             mess_type = "jap"
-
+        else:
+            await message_obj.reply("Dostepne warianty: pdp | raspberry | japonce")
+            return
         await message_obj.reply(self.mess.overview_message(mess_type, val))
 
     async def alert(self, message, args):
@@ -32,6 +34,9 @@ class Joachim:
         elif "japan" in args:
             self.db.alert("jap")
             await message.reply(self.mess.jap_message())
+        else:
+            await message.reply("Dostepne warianty: pdp | raspberry | japonce")
+            return
 
 
 # Jochaim alerts

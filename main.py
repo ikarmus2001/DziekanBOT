@@ -92,7 +92,7 @@ class Bot(dc.Client):
         )
 
         for name, command in filter(
-                lambda x: True,
+                lambda entry: self.config.has_permission(entry[0], message),
                 self.commands_handlers.items(),
         ):
             embed.add_field(
@@ -118,7 +118,7 @@ class Bot(dc.Client):
             command = content.split()[0]
 
             if func := self.commands_handlers.get(command, False):
-                if await self.config.has_permision(command, message):
+                if self.config.has_permission(command, message):
                     await func(message, args)
                 else:
                     await message.reply("Nie masz permisji aby wykonac ta komende")
