@@ -1,6 +1,6 @@
 import sqlite3
 import asyncio
-
+from itertools import chain
 import discord as dc
 
 from config import Config
@@ -35,44 +35,47 @@ class Bot(dc.Client):
             "alert": self.joachim.alert,
         }
 
+    @staticmethod
+    async def change_user_nick(user, desired_nickname):
+        try:
+            await user.edit(nick=desired_nickname)
+        except:
+            pass
+
+    @staticmethod
+    async def change_member_nick(message, member_id, username):
+        user = await message.guild.fetch_member(member_id)
+        try:
+            await user.edit(nick=username)
+        except:
+            pass
+
     async def panic(self, message, args):
         async with asyncio.Lock():
             if "on" in args:
-                user_count  = self.db.execute("SELECT count(*) FROM user_id_mapping").fetchone()[0]
-
-                if user_count != 0:
+                if self.db.execute("SELECT count(*) != 0 FROM user_id_mapping").fetchone()[0]:
                     await message.reply("AAAAAAAAa ty 2 paniczki z rzedu")
                     return
 
                 users = [*self.get_all_members()]
+
                 self.db.executemany(
                     "INSERT INTO user_id_mapping VALUES (?,?)",
                     [(user.id, user.display_name) for user in users],
                 )
                 self.db.commit()
 
-                await message.reply(self.config.start_panic_gif)
-
-                for index, user in enumerate(users):
-                    try:
-                        await user.edit(nick=index)
-                    except:
-                        continue
+                await asyncio.wait(chain([Bot.change_user_nick(user, index) for index, user in enumerate(users)],
+                                         [message.reply(self.config.start_panic_gif)]))
 
             elif "off" in args:
-                await message.reply(self.config.end_panic_gif)
+                await asyncio.wait(
+                    chain([Bot.change_member_nick(message, member_id, username) for member_id, username in
+                           self.db.execute("SELECT * FROM user_id_mapping")],
+                          [message.reply(self.config.end_panic_gif)]))
 
-                for member_id, username in self.db.execute(
-                    "SELECT * FROM user_id_mapping"
-                ):
-                    user = await message.guild.fetch_member(member_id)
-                    try:
-                        await user.edit(nick=username)
-                    except:
-                        continue
                 self.db.execute("DELETE FROM user_id_mapping")
                 self.db.commit()
-                print("DELETED")
 
     async def help(self, message, _):
         """Wlasnie to czytasz"""
@@ -89,8 +92,8 @@ class Bot(dc.Client):
         )
 
         for name, command in filter(
-            lambda x: True,
-            self.commands_handlers.items(),
+                lambda x: True,
+                self.commands_handlers.items(),
         ):
             embed.add_field(
                 name=self.config.prefix + name,
@@ -110,7 +113,7 @@ class Bot(dc.Client):
             return
 
         if message.content.startswith(self.config.prefix):
-            content = message.content[len(self.config.prefix) :]
+            content = message.content[len(self.config.prefix):]
             args = content.split()[1::] if len(content.split()) > 1 else [None]
             command = content.split()[0]
 
