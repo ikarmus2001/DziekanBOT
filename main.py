@@ -38,10 +38,16 @@ class Bot(dc.Client):
     async def panic(self, message, args):
         async with asyncio.Lock():
             if "on" in args:
+                user_count  = self.db.execute("SELECT count(*) FROM user_id_mapping").fetchone()[0]
+
+                if user_count != 0:
+                    await message.reply("AAAAAAAAa ty 2 paniczki z rzedu")
+                    return
+
                 users = [*self.get_all_members()]
                 self.db.executemany(
                     "INSERT INTO user_id_mapping VALUES (?,?)",
-                    [(user.user_id, user.display_name) for user in users],
+                    [(user.id, user.display_name) for user in users],
                 )
                 self.db.commit()
 
@@ -83,7 +89,7 @@ class Bot(dc.Client):
         )
 
         for name, command in filter(
-            lambda x: self.config.has_permision(x[0], message),
+            lambda x: True,
             self.commands_handlers.items(),
         ):
             embed.add_field(
