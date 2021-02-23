@@ -1,0 +1,73 @@
+{
+  "token": "ODEzMzY3NTI3MTYwODA3NDc0.YDORig.hcT-fBZB5I8popFGOThvNjP8fkk",
+  "perms_roles": {
+    "1": [
+      754002928632725584
+    ],
+    "2": [],
+    "3": [
+      805418469674975282,
+      572403736987566101,
+      754003569727897702
+    ]
+  },
+  "perms": {
+    "id": 0,
+    "me": 0,
+    "say": 0,
+    "overview": 0,
+    "purge": 1,
+    "help": 1,
+    "alert": 1,
+    "panic": 2
+  },
+  "prefix": "!",
+  "joachim": {
+    "timeout": 15,
+    "timestamps": [
+      5,
+      10,
+      15,
+      30,
+      60,
+      90
+    ],
+    "alert": {
+      "pdp": [
+        "Ktos tu znowu wspomnial o pdp!"
+      ],
+      "japan": [
+        "Te japonczyki to jednak sprytne sa!"
+      ],
+      "raspberry": [
+        "Taki fajny mini-komputerek"
+      ]
+    },
+    "overview": {
+      "pdp": [
+        "Nasz przeukochańszy towarzysz Joachim wspomnial o przepieknym komputerze pdp"
+      ],
+      "ras": [
+        "Bóg współczesnej informatyki - Joachim przypomnial ci o tym ze nie masz rasberry pi "
+      ],
+      "jap": [
+        "Uwiezioni w piwnicy japońcy odezwali sie"
+      ]
+    }
+  },
+  "panic": {
+    "start_panic_gifs": [
+      "https://tenor.com/view/timon-pumba-lion-king-ahh-scream-gif-4655859",
+      "https://tenor.com/view/aaaaa-aaaaaaa-shout-yell-rat-gif-14860400",
+      "https://tenor.com/view/panic-anime-dont-know-what-to-do-running-in-circles-gif-14026454",
+      "https://tenor.com/view/panic-time-to-panic-is-my-house-okay-simpsons-breaking-news-gif-12267791"
+    ],
+    "end_panic_gifs": [
+      "https://tenor.com/view/chi-gif-4373114",
+      "https://tenor.com/view/fine-this-is-fine-gif-11131666",
+      "https://tenor.com/view/calm-down-gif-5362498",
+      "https://tenor.com/view/victory-blunt-smoke-cigarette-celebrate-bryce-gif-14525627",
+      "https://tenor.com/view/daddy-chill-calm-down-wait-gif-14383390"
+    ]
+  }
+}
