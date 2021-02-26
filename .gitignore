@@ -1,4 +1,5 @@
 .env
+new_config.json
 db.db
 # Byte-compiled / optimized / DLL files
 __pycache__/

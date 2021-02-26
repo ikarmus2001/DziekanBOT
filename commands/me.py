@@ -1,5 +1,8 @@
 import datetime as dt
 import discord as dc
+from discord import Member, Message
+from typing import Optional
+from discord.ext.commands import command
 
 
 def get_avatar_url(user):
@@ -7,12 +10,11 @@ def get_avatar_url(user):
     return base + str(user.id) + "/" + str(user.avatar)
 
 
-async def get_me_embed(message, user=None):
+@command(name='me')
+async def me(ctx: Message, user: Optional[Member]):
+    user = ctx.author if user is None else user
+
     embed = dc.Embed(title="User info")
-
-    if not user:
-        user = message.author
-
     embed.color = user.color
     embed.set_image(url=get_avatar_url(user))
 
@@ -21,21 +23,9 @@ async def get_me_embed(message, user=None):
         f"\nBeen here for: `{str(dt.datetime.now() - user.joined_at).split(',')[0]}`"
     )
 
-    user_roles = [role.name for role in user.roles if role.name != "@everyone"]
-
-    if not user_roles:
-        roles_info = "No roles to see here!"
-    else:
-        roles_info = ", ".join(user_roles)
+    roles_info = ",".join([role.name for role in user.roles if role.name != "@everyone"]) or "No roles to see here!"
 
     embed.add_field(name="Join Date", value=joined_info, inline=False)
     embed.add_field(name="User Roles", value=roles_info, inline=False)
 
-    await message.channel.send(embed=embed)
-
-
-async def me(message, _):
-    if len(message.mentions) == 1:
-        await get_me_embed(message, message.mentions[0])
-    else:
-        await get_me_embed(message)
+    await ctx.reply(embed=embed)

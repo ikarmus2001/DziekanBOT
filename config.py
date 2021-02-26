@@ -16,6 +16,7 @@ class Config:
             return True
 
         user_roles = message.author.roles
+        print(user_roles)
 
         for crt_power in range(command_power, 4):
             if any(user_role.id in self.data["perms_roles"][str(crt_power)] for user_role in user_roles):
@@ -26,23 +27,6 @@ class Config:
         with open(self.config_path, mode="w") as f:
             json.dump(self.data, f, indent=4)
 
-    def pdp_message(self):
-        return choice(self.data["joachim"]["alert"]["pdp"])
-
-    def jap_message(self):
-        return choice(self.data["joachim"]["alert"]["japan"])
-
-    def raspberry_message(self):
-        return choice(self.data["joachim"]["alert"]["raspberry"])
-
-    @property
-    def joachim_timeout(self):
-        return self.data["joachim"]["timeout"]
-
-    @property
-    def joachim_timestamps(self):
-        return self.data["joachim"]["timestamps"]
-
     @property
     def token(self):
         return self.data["token"]
@@ -51,14 +35,29 @@ class Config:
     def prefix(self):
         return self.data["prefix"]
 
+    # Paniczka section
     @property
-    def overview(self):
-        return self.data["joachim"]["overview"]
+    def gif_per_channel(self):
+        return 4
 
-    @property
-    def start_panic_gif(self):
-        return choice(self.data["panic"]["start_panic_gifs"])
+    def start_panic_gifs(self, number_of_gifs):
+        assert len(self.data["panic"]["start_panic_gifs"]) >= number_of_gifs
+        i = 0
+        yielded_gifs = set()
 
-    @property
-    def end_panic_gif(self):
-        return choice(self.data["panic"]["end_panic_gifs"])
+        while i < number_of_gifs:
+            if (gif := choice(self.data["panic"]["start_panic_gifs"])) not in yielded_gifs:
+                yielded_gifs.add(gif)
+                i += 1
+                yield gif
+
+    def end_panic_gifs(self, number_of_gifs):
+        assert len(self.data["panic"]["end_panic_gifs"]) >= number_of_gifs
+        i = 0
+        yielded_gifs = set()
+
+        while i < number_of_gifs:
+            if (gif := choice(self.data["panic"]["end_panic_gifs"])) not in yielded_gifs:
+                yielded_gifs.add(gif)
+                i += 1
+                yield gif

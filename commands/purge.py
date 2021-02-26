@@ -1,10 +1,7 @@
-async def purge(message, args):
-    try:
-        del_range = int(args[0])
-    except ValueError:
-        await message.reply("Please specify how many messages to purge.")
-    else:
-        if del_range in range(1, 51):
-            await message.channel.purge(limit=del_range + 1, bulk=True)
-        else:
-            await message.reply("Purge amount must be in range from `1` to `50`.")
+from discord.ext.commands import command
+from .converters.range import RangeConverter
+
+
+@command(name="purge")
+async def purge(ctx, number_messages_to_delete: RangeConverter(1, 51)):
+    await ctx.channel.purge(limit=number_messages_to_delete + 1, bulk=True)
