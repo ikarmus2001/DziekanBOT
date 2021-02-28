@@ -1,34 +1,18 @@
-# import sqlite3
-# import asyncio
-# from itertools import chain
-# import discord as dc
-#
-# from config import Config
-#
-# from commands.id import user_id
-# from commands.me import me
-# from commands.purge import purge
-# from commands.say import say
-# from commands.joachim import Joachim
-
-import inspect
-from inspect import Parameter
+import discord
 from discord.ext.commands import Bot
+from discord.ext.commands.errors import CommandNotFound, BadArgument, BadUnionArgument
+
+from commands.help import dsc_help
+from commands.id import user_id
+from commands.me import me
+from commands.panic import Panic
+from commands.purge import purge
+from commands.say import say
+from commands.help import get_readable_signature
 from config import Config
 
-from discord.ext.commands.errors import CommandNotFound, BadArgument
-
-# Converters
-from commands.converters.range import RangeConverter
-from commands.converters.polish_bool import PolishBool
 
 # Commands
-from commands.say import say
-from commands.purge import purge
-from commands.panic import Panic
-from commands.me import me
-from commands.id import user_id
-import discord
 
 
 # class Bot(dc.Client):
@@ -126,32 +110,15 @@ class CustomBot(Bot):
         self.config = config
         super().__init__(command_prefix="!", intents=discord.Intents.all())
 
-    async def on_error(self, exception):
+    async def on_command_error(self, context, exception):
         if isinstance(exception, CommandNotFound):
-            await self.message.reply(f"Command doesn't exists try - {1}help")
-        elif isinstance(exception, BadArgument):
-            await self.message.reply(
-                "Error while trying to parse args \n**Correct use ** - " + self.prefix + get_readable_signature(
-                    self.command))
+            await context.message.reply(f"Command doesn't exists try - {self.command_prefix}help")
+
+        elif isinstance(exception, BadArgument) or isinstance(exception, BadUnionArgument):
+            await context.message.reply(
+                "Error while trying to parse args \n**Correct use ** - "
+                + self.command_prefix + get_readable_signature(context.command))
         raise exception
-
-    @staticmethod
-    def get_readable_arg(argtype):
-        parsed_name = argtype.name.replace("_", " ")
-
-        if argtype.annotation is int:
-            return f" [{parsed_name} - INT]"
-        if any(isinstance(argtype.annotation, our_class) for our_class in [RangeConverter, PolishBool]):
-            return f"[{parsed_name} - {argtype.annotation.display()}]"
-        return f"[ {parsed_name} Couldn't resolve type hint ]"
-
-    @staticmethod
-    def get_readable_signature(command):
-        result = command.name
-        if len(command.aliases) > 0:
-            result += " | ".join(command.aliases)
-        result += " ".join([CustomBot.get_readable_arg(value) for value in command.clean_params.values()])
-        return result
 
 
 client = CustomBot(Config())
@@ -164,6 +131,9 @@ client.add_command(me)
 client.add_command(purge)
 client.add_command(user_id)
 
+client.remove_command('help')
+client.add_command(dsc_help)
+
 client.add_cog(panic_obc)
 
-client.run("")
+client.run("ODEzMzY3NTI3MTYwODA3NDc0.YDORig.te5ohBTOkEGIvVjWWSCC9glw7GA")

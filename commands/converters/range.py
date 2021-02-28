@@ -17,5 +17,5 @@ class RangeConverter(Converter):
         raise BadArgument
 
     def display(self):
-        return f"[{self.min_num}-{self.max_num}]"
+        return f"{self.min_num}-{self.max_num}"
 

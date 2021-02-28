@@ -13,5 +13,6 @@ class PolishBool(Converter):
             return False
         raise BadArgument
 
-    def display(self):
-        return f"**For yes** - {' '.join(self.yes)} \n For no {' '.join(self.no)}"
+    @staticmethod
+    def display():
+        return f"Yes | No"
