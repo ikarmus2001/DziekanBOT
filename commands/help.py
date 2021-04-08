@@ -1,13 +1,14 @@
 from itertools import chain
-
 from discord import User, TextChannel, Role, Member
-
+from discord.partial_emoji import PartialEmoji
 import discord
 from discord.ext.commands import command
 from typing import Union
 
 
 def arg_to_str(argtype):
+    print(type(argtype), argtype.name)
+
     if argtype is Role:
         return "Role mention"
 
@@ -20,20 +21,28 @@ def arg_to_str(argtype):
     if argtype is Member:
         return "Member mention"
 
-    if callable(getattr(argtype.annotation, "display", None)):
-        return argtype.annotation.display()
+    if argtype.annotation is PartialEmoji:
+        return "Emoji"
 
-    if argtype.annotation.__origin__ is Union:
-        if len(argtype.annotation.__args__) == 2 and argtype.annotation.__args__[1] is type(None):
-            return "Optional " + arg_to_str(argtype.annotation.__args__[0])
-        return " | ".join(arg_to_str(annotation) for annotation in argtype.annotation.__args__)
+    if annotation := getattr(argtype, "annotation", False):
+        if callable(getattr(annotation, "display", False)):
+            return argtype.annotation.display()
+
+        if getattr(argtype, "__origin__", None) is Union:
+            if len(annotation.__args__) == 2 and annotation.__args__[1] is type(None):
+                return "Optional " + arg_to_str(argtype.annotation.__args__[0])
+            return " | ".join(
+                arg_to_str(annotation) for annotation in annotation.__args__
+            )
 
     return f" Couldn't resolve type hint "
 
 
 def get_command_name(input_command):
     if len(input_command.aliases) > 0:
-        return "[ " + " | ".join(chain([input_command.name], input_command.aliases)) + " ]"
+        return (
+            "[ " + " | ".join(chain([input_command.name], input_command.aliases)) + " ]"
+        )
     return input_command.name
 
 
